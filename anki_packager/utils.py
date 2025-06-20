@@ -32,7 +32,7 @@ def initialize_config():
         "API_KEY": "",
         "API_BASE": "",
         "MODEL": "",
-        "PROXY": "127.0.0.1:7890",
+        "PROXY": "127.0.0.1:63797",
         "EUDIC_TOKEN": "",
         "EUDIC_ID": "0",
         "DECK_NAME": "anki-packager",
