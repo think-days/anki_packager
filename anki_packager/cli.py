@@ -118,7 +118,6 @@ def main():
     config_path = os.path.join(config_dir, "config")
     config_file = os.path.join(config_path, "config.json")
 
-
     ## 1. read config.json
     with open(config_file, "r") as ai_cfg:
         cfg = json.load(ai_cfg)
@@ -184,7 +183,7 @@ def main():
         model_class = MODEL_DICT[MODEL].__module__.split(".")[-1]
         if model_class == "gpt":
             API_KEY = options.openai_key or env.get("OPENAI_API_KEY") or API_KEY
-        elif model_class == "deepseek":
+        elif model_class in ("siliconflow", "deepseek"):
             API_KEY = (
                 options.deepseek_key or env.get("DEEPSEEK_API_KEY") or API_KEY
             )

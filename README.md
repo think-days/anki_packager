@@ -55,7 +55,6 @@
 pip install apkger
 ```
 
-在使用 apkger 之前，你需要先在 `config/config.json`文件中填写相关配置信息：
 在第一次运行时，程序会在用户目录下创建配置文件，路径通常为：
 
 - Linux/MacOS: `~/.config/anki_packager/config/config.json`
@@ -68,7 +67,7 @@ pip install apkger
   "API_KEY": "your-api-key-here",
   "API_BASE": "https://api.openai.com/v1",
   "MODEL": "gpt-4o",
-  "PROXY": "127.0.0.1:7890",
+  "PROXY": "127.0.0.1:63797",
   "EUDIC_TOKEN": "your-eudic-token",
   "EUDIC_ID": "0",
   "DECK_NAME": "anki_packager"
@@ -76,6 +75,7 @@ pip install apkger
 ```
 
 - 如果需要 AI 功能，必须配置 `API_KEY`、`MODEL`、`API_BASE`和 `PROXY`
+  目前支持的模型：`gpt-4o`、`deepseek-ai/DeepSeek-V2.5`、`Pro/deepseek-ai/DeepSeek-V3`、`gemini-2.0-flash`
 - 如果需要使用欧路词典生词本：先按照[欧陆官方获取](https://my.eudic.net/OpenAPI/Authorization) TOKEN，然后使用`apkger --eudicid` 选择 ID 写入配置文件
 
 ### 下载字典
@@ -121,6 +121,9 @@ apkger --eudic
 # 创建并激活一个名为 apkg 的 Python 3.9 虚拟环境
 conda create -n apkg python=3.9
 conda activate apkg
+
+# 进入项目目录（以 Windows 为例）
+cd D:\\Code\\anki_packager
 
 # 安装项目依赖
 pip install -r requirements.txt

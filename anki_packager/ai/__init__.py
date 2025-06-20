@@ -7,6 +7,5 @@ MODEL_DICT = {
     "deepseek-ai/DeepSeek-V2.5": SiliconFlow,
     "deepseek-ai/DeepSeek-V3": SiliconFlow,
     "Pro/deepseek-ai/DeepSeek-V3": SiliconFlow,
-    "Pro/deepseek-ai/DeepSeek-R1": SiliconFlow,
     "gemini-2.0-flash": Gemini,
 }
