@@ -16,7 +16,8 @@ class Ecdict:
         self.config_dir = get_user_config_dir()
         self.dicts_dir = os.path.join(self.config_dir, "dicts")
         # keep the package archive small
-        self.seven_zip = os.path.join(self.dicts_dir, "stardict.7z")
+        # self.seven_zip = os.path.join(self.dicts_dir, "stardict.7z")
+        self.seven_zip = "D:/Code/anki_packager/anki_packager/dict/stardict.7z"  # 直接写绝对路径
         self.csv = os.path.join(self.dicts_dir, "stardict.csv")
         self.sqlite = os.path.join(self.dicts_dir, "stardict.db")
         self._convert()

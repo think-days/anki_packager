@@ -56,6 +56,12 @@ pip install apkger
 ```
 
 在使用 apkger 之前，你需要先在 `config/config.json`文件中填写相关配置信息：
+在第一次运行时，程序会在用户目录下创建配置文件，路径通常为：
+
+- Linux/MacOS: `~/.config/anki_packager/config/config.json`
+- Windows: `%APPDATA%\anki_packager\config\config.json`
+
+请在该文件中填写以下配置信息：
 
 ```json
 {

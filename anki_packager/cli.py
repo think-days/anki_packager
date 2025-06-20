@@ -116,9 +116,11 @@ def main():
     ### set config according to config directory or parsed arguments
     config_dir = get_user_config_dir()
     config_path = os.path.join(config_dir, "config")
+    config_file = os.path.join(config_path, "config.json")
+
 
     ## 1. read config.json
-    with open(os.path.join(config_path, "config.json"), "r") as ai_cfg:
+    with open(config_file, "r") as ai_cfg:
         cfg = json.load(ai_cfg)
         API_KEY = cfg["API_KEY"]
         PROXY = cfg["PROXY"]
@@ -129,6 +131,7 @@ def main():
         DECK_NAME = cfg["DECK_NAME"]
     ai_cfg.close()
     logger.info("配置读取完毕")
+    logger.info(f"配置文件路径: {config_file}")
 
     # display eudict id only
     if options.eudicid:
