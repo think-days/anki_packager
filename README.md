@@ -60,6 +60,8 @@ pip install apkger
 - Linux/MacOS: `~/.config/anki_packager/config/config.json`
 - Windows: `%APPDATA%\anki_packager\config\config.json`
 
+启动程序时会在日志中显示实际使用的配置文件路径，可通过 `apkger --version` 查看当前程序版本，确保与你的源码一致。
+
 请在该文件中填写以下配置信息：
 
 ```json
@@ -76,6 +78,7 @@ pip install apkger
 
 - 如果需要 AI 功能，必须配置 `API_KEY`、`MODEL`、`API_BASE`和 `PROXY`
   目前支持的模型：`gpt-4o`、`deepseek-ai/DeepSeek-V2.5`、`Pro/deepseek-ai/DeepSeek-V3`、`gemini-2.0-flash`
+- 运行 `apkger --version` 可查看当前安装的版本号
 - 如果需要使用欧路词典生词本：先按照[欧陆官方获取](https://my.eudic.net/OpenAPI/Authorization) TOKEN，然后使用`apkger --eudicid` 选择 ID 写入配置文件
 
 ### 下载字典

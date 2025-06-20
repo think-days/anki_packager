@@ -13,6 +13,7 @@ from anki_packager.logger import logger
 
 ### AI
 from anki_packager.ai import MODEL_DICT
+from anki_packager import __version__
 
 ### Dictionaries
 from anki_packager.dict.youdao import YoudaoScraper
@@ -38,6 +39,11 @@ def create_signal_handler(anki, youdao, audio_files, DECK_NAME, pbar):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"apkger {__version__}",
+    )
 
     parser.add_argument("--word", dest="word", type=str, help="word to add")
 
@@ -139,6 +145,8 @@ def main():
     ai_cfg.close()
     logger.info("配置读取完毕")
     logger.info(f"配置文件路径: {config_file}")
+    logger.info(f"代理设置: {PROXY or '未配置'}")
+    logger.info(f"AI 模型: {MODEL or '未设置'}")
 
     # display eudict id only
     if options.eudicid:
