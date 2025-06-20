@@ -75,6 +75,14 @@ def main():
         help="OpenAI api key",
     )
 
+    parser.add_argument(
+        "--deepseek_key",
+        dest="deepseek_key",
+        type=str,
+        default="",
+        help="DeepSeek API key",
+    )
+
     # support user-defined txt file: ./prog --txt demo.txt
     parser.add_argument(
         "--txt",
@@ -100,7 +108,7 @@ def main():
         dest="proxy",
         type=str,
         default="",
-        help="Default proxy like: http://127.0.0.1:7890",
+        help="Default proxy like: http://127.0.0.1:63797",
     )
 
     parser.add_argument(

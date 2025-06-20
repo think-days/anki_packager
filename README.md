@@ -155,7 +155,7 @@ make build
 # 第一次运行容器下载词典（需要一点时间）
 make run
 
-# 进入容器（注意！需要在主机先配置 config/config.json）
+# 进入容器（会将 ./config 映射到容器的 ~/.config/anki_packager）
 # 在容器中运行 anki_packager，生成的牌组会保存在当前目录中
 make shell
 ```
