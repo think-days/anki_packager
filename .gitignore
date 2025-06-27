@@ -267,6 +267,8 @@ fabric.properties
 # Anki Packager specific ignores
 # Configuration files (contain API keys and personal settings)
 config/
+!config/config.json
+config/*.json
 !config/config.json.example
 
 # Audio files (generated content)
