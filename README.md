@@ -17,20 +17,29 @@
   </p>
 </p>
 
+<div align="center">
+  
+  ![GitHub branch checks state](https://img.shields.io/badge/版本-无GUI稳定版-brightgreen)
+  ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+  ![License](https://img.shields.io/badge/License-MIT-green.svg)
+  
+</div>
+
 ## 关于项目
 
 `anki_packager` 是一款自动化的 Anki 单词卡片生成工具，能够自动创建高质量的 `.apkg` 牌组。本项目致力于为英语学习者提供一个高效、智能的记忆辅助工具。
 
 ### 核心特性
 
-- 多源精选词典整合：[ECDICT](https://github.com/skywind3000/ECDICT)、[《有道词语辨析》加强版](https://skywind.me/blog/archives/2941)、[单词释义比例词典](https://skywind.me/blog/archives/2938)
-- 智能化学习体验：
+- **多源精选词典整合**：[ECDICT](https://github.com/skywind3000/ECDICT)、[《有道词语辨析》加强版](https://skywind.me/blog/archives/2941)、[单词释义比例词典](https://skywind.me/blog/archives/2938)
+- **智能化学习体验**：
   - 自动抓取有道词典优质例句和常用短语
   - 支持谷歌 TTS 发音、中英双解、考纲标记等功能
   - 支持流行 AI 模型（需要 API-KEY）对单词进行总结、助记及和情境故事生成
-- 便捷的数据导入：支持欧路词典生词本一键导入并批量处理单词列表，自动生成卡片
-- 优良的命令行体验：显示处理进度，支持记录错误、支持丰富的命令行参数
-- 支持 Docker 运行、支持 PyPI 安装
+- **便捷的数据导入**：支持欧路词典生词本一键导入并批量处理单词列表，自动生成卡片
+- **优良的命令行体验**：显示处理进度，支持记录错误、支持丰富的命令行参数
+- **支持 Docker 运行、支持 PyPI 安装**
+- **完善的单词管理功能**：支持添加、删除、清空单词，音频文件管理，孤立文件清理等
 
 ### 卡片预览
 
@@ -55,19 +64,20 @@
 pip install apkger
 ```
 
-在第一次运行时，程序会在用户目录下创建配置文件，路径通常为：
+在第一次运行时，程序会在项目目录下创建配置文件，路径为：
 
-- Linux/MacOS: `~/.config/anki_packager/config/config.json`
-- Windows: `%APPDATA%\anki_packager\config\config.json`
+- `D:\Code\anki_packager\config\config.json`
 
 请在该文件中填写以下配置信息：
 
 ```json
 {
-  "API_KEY": "your-api-key-here",
-  "API_BASE": "https://api.openai.com/v1",
-  "MODEL": "gpt-4o",
-  "PROXY": "127.0.0.1:63797",
+  "API_KEY": "your-siliconflow-api-key-here",
+  "OPENROUTER_API_KEY": "your-openrouter-api-key-here",
+  "API_BASE": "https://api.siliconflow.cn",
+  "OPENROUTER_API_BASE": "https://openrouter.ai/api/v1",
+  "MODEL": "openai/gpt-4.1-nano",
+  "PROXY": "127.0.0.1:7890",
   "EUDIC_TOKEN": "your-eudic-token",
   "EUDIC_ID": "0",
   "DECK_NAME": "anki_packager"
@@ -75,15 +85,14 @@ pip install apkger
 ```
 
 - 如果需要 AI 功能，必须配置 `API_KEY`、`MODEL`、`API_BASE`和 `PROXY`
-  目前支持的模型：`gpt-4o`、`deepseek-ai/DeepSeek-V2.5`、`Pro/deepseek-ai/DeepSeek-V3`、`gemini-2.0-flash`
-- 如果需要使用欧路词典生词本：先按照[欧陆官方获取](https://my.eudic.net/OpenAPI/Authorization) TOKEN，然后使用`apkger --eudicid` 选择 ID 写入配置文件
+  目前支持的模型：`openai/gpt-4.1-nano`、`openai/gpt-4.1-mini`、`Pro/deepseek-ai/DeepSeek-V3`
+- 如果需要使用欧路词典生词本：先按照[欧陆官方获取](https://my.eudic.net/OpenAPI/Authorization) TOKEN，然后使用`apkger --auto-eudicid` 自动设置ID
 
 ### 下载字典
 
-下载字典到配置目录中（注意名称不要错）:
+下载字典到项目目录中（注意名称不要错）:
 
-- Linux/MacOS: `~/.config/anki_packager/dicts/`
-- Windows: `C:\Users\<用户名>\AppData\Roaming\anki_packager\dicts\`
+- `D:\Code\anki_packager\dicts\`
 
 字典数据（感谢[skywind）](https://github.com/skywind3000)下载地址:
 
@@ -104,14 +113,24 @@ apkger -h
 # 从默认生词本读词生成卡片
 apkger
 
-### 关闭 AI 功能
+# 关闭 AI 功能
 apkger --disable_ai
 
-### 从欧路词典生词本导出单词，生成卡片（需要先配置)
+# 从欧路词典生词本导出单词，生成卡片（需要先配置)
 ## 先查看 ID 写入配置文件
 apkger --eudicid
 ## 生成卡片
 apkger --eudic
+
+# 单词管理功能
+apkger --list-words          # 列出所有单词
+apkger --remove-word hello   # 删除指定单词
+apkger --clear-words         # 清空所有单词
+apkger --list-audio          # 列出所有音频文件
+apkger --delete-audio hello  # 删除指定音频
+apkger --clear-audio         # 清空所有音频
+apkger --cleanup-audio       # 清理孤立音频文件
+apkger --stats               # 显示统计信息
 ```
 
 <details>
@@ -139,6 +158,11 @@ python -m anki_packager --disable_ai
 
 # 从生词本读词生成卡片
 python -m anki_packager
+
+# 单词管理示例
+python -m anki_packager --list-words
+python -m anki_packager --stats
+python -m anki_packager --cleanup-audio
 ```
 
 </details>
@@ -167,7 +191,7 @@ make shell
 - [x] ~~集成单词释义比例词典~~
 - [x] ~~近一步优化单词卡片 UI~~
 - [x] ~~从欧路词典导入生词~~
-- [x] ~~支持 SiliconFlow、Gemini~~
+- [x] ~~支持 SiliconFlow~~
 - [x] ~~重新支持 Docker~~
 - [x] ~~发布到 PyPI~~
 - [ ] 支持更多软件生词导出

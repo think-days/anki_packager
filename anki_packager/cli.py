@@ -6,7 +6,20 @@ from tqdm import tqdm
 import signal
 
 ### config
-from anki_packager.utils import get_user_config_dir
+from anki_packager.utils import (
+    get_user_config_dir, 
+    read_vocabulary, 
+    write_vocabulary, 
+    add_word_to_vocabulary, 
+    remove_word_from_vocabulary, 
+    clear_vocabulary,
+    get_audio_files,
+    delete_audio_file,
+    delete_all_audio_files,
+    get_orphaned_audio_files,
+    get_missing_audio_files,
+    cleanup_orphaned_audio
+)
 
 ### logger
 from anki_packager.logger import logger
@@ -62,17 +75,23 @@ def main():
     )
 
     parser.add_argument(
+        "--auto-eudicid",
+        action="store_true",
+        help="Auto set first EUDIC studylist ID to config",
+    )
+
+    parser.add_argument(
         "--eudic",
         action="store_true",
         help="Use EUDIC book instead of vocabulary.txt",
     )
 
     parser.add_argument(
-        "--openai_key",
-        dest="openai_key",
+        "--siliconflow_key",
+        dest="siliconflow_key",
         type=str,
         default="",
-        help="OpenAI api key",
+        help="SiliconFlow api key",
     )
 
     # support user-defined txt file: ./prog --txt demo.txt
@@ -81,13 +100,6 @@ def main():
         dest="txt_file",
         type=str,
         help="Use a custom txt file instead of vocabulary.txt",
-    )
-
-    parser.add_argument(
-        "--gemini_key",
-        dest="gemini_key",
-        type=str,
-        help="Google Gemini api key",
     )
 
     parser.add_argument(
@@ -108,15 +120,65 @@ def main():
         metavar="API_BASE_URL",
         dest="api_base",
         type=str,
-        help="Default base url other than the OpenAI's official API address",
+        help="Default base url other than the SiliconFlow's official API address",
+    )
+
+    # 单词管理相关命令
+    parser.add_argument(
+        "--list-words",
+        action="store_true",
+        help="List all words in vocabulary.txt",
+    )
+
+    parser.add_argument(
+        "--remove-word",
+        dest="remove_word",
+        type=str,
+        help="Remove a specific word from vocabulary.txt",
+    )
+
+    parser.add_argument(
+        "--clear-words",
+        action="store_true",
+        help="Clear all words from vocabulary.txt",
+    )
+
+    parser.add_argument(
+        "--list-audio",
+        action="store_true",
+        help="List all audio files",
+    )
+
+    parser.add_argument(
+        "--delete-audio",
+        dest="delete_audio",
+        type=str,
+        help="Delete audio file for a specific word",
+    )
+
+    parser.add_argument(
+        "--clear-audio",
+        action="store_true",
+        help="Delete all audio files",
+    )
+
+    parser.add_argument(
+        "--cleanup-audio",
+        action="store_true",
+        help="Remove orphaned audio files (files without corresponding words in vocabulary)",
+    )
+
+    parser.add_argument(
+        "--stats",
+        action="store_true",
+        help="Show statistics about vocabulary and audio files",
     )
 
     options = parser.parse_args()
 
     ### set config according to config directory or parsed arguments
     config_dir = get_user_config_dir()
-    config_path = os.path.join(config_dir, "config")
-    config_file = os.path.join(config_path, "config.json")
+    config_file = os.path.join(config_dir, "config.json")
 
     ## 1. read config.json
     with open(config_file, "r") as ai_cfg:
@@ -132,6 +194,93 @@ def main():
     logger.info("配置读取完毕")
     logger.info(f"配置文件路径: {config_file}")
 
+    # 单词管理命令处理
+    if options.list_words:
+        words = read_vocabulary()
+        if words:
+            logger.info(f"词汇表中共有 {len(words)} 个单词:")
+            for i, word in enumerate(words, 1):
+                print(f"{i:3d}. {word}")
+        else:
+            logger.info("词汇表为空")
+        exit(0)
+
+    elif options.remove_word:
+        word = options.remove_word
+        if remove_word_from_vocabulary(word):
+            logger.info(f"单词 '{word}' 已从词汇表中删除")
+            # 同时删除对应的音频文件
+            if delete_audio_file(word):
+                logger.info(f"音频文件 '{word}.mp3' 已删除")
+        else:
+            logger.warning(f"单词 '{word}' 不在词汇表中")
+        exit(0)
+
+    elif options.clear_words:
+        clear_vocabulary()
+        logger.info("词汇表已清空")
+        exit(0)
+
+    elif options.list_audio:
+        audio_files = get_audio_files()
+        if audio_files:
+            logger.info(f"音频目录中共有 {len(audio_files)} 个音频文件:")
+            for i, word in enumerate(audio_files, 1):
+                print(f"{i:3d}. {word}.mp3")
+        else:
+            logger.info("音频目录为空")
+        exit(0)
+
+    elif options.delete_audio:
+        word = options.delete_audio
+        if delete_audio_file(word):
+            logger.info(f"音频文件 '{word}.mp3' 已删除")
+        else:
+            logger.warning(f"音频文件 '{word}.mp3' 不存在")
+        exit(0)
+
+    elif options.clear_audio:
+        count = delete_all_audio_files()
+        logger.info(f"已删除 {count} 个音频文件")
+        exit(0)
+
+    elif options.cleanup_audio:
+        orphaned = get_orphaned_audio_files()
+        if orphaned:
+            logger.info(f"发现 {len(orphaned)} 个孤立音频文件:")
+            for word in orphaned:
+                print(f"  - {word}.mp3")
+            
+            count = cleanup_orphaned_audio()
+            logger.info(f"已清理 {count} 个孤立音频文件")
+        else:
+            logger.info("没有发现孤立的音频文件")
+        exit(0)
+
+    elif options.stats:
+        vocab_words = read_vocabulary()
+        audio_words = get_audio_files()
+        orphaned = get_orphaned_audio_files()
+        missing = get_missing_audio_files()
+        
+        print("\n=== 词汇和音频文件统计 ===")
+        print(f"词汇表单词数量: {len(vocab_words)}")
+        print(f"音频文件数量: {len(audio_words)}")
+        print(f"孤立音频文件: {len(orphaned)}")
+        print(f"缺少音频的单词: {len(missing)}")
+        
+        if orphaned:
+            print(f"\n孤立音频文件列表:")
+            for word in orphaned:
+                print(f"  - {word}.mp3")
+        
+        if missing:
+            print(f"\n缺少音频的单词列表:")
+            for word in missing:
+                print(f"  - {word}")
+        
+        exit(0)
+
     # display eudict id only
     if options.eudicid:
         logger.info("设置：仅读取欧路词典 ID")
@@ -139,13 +288,22 @@ def main():
         eudic.get_studylist()
         exit(0)
 
+    # auto set first eudic studylist id
+    elif options.auto_eudicid:
+        logger.info("设置：自动设置第一个欧路词典生词本ID")
+        eudic = EUDIC(EUDIC_TOKEN, EUDIC_ID)
+        new_id = eudic.auto_set_first_studylist_id()
+        if new_id:
+            logger.info("欧路词典ID设置成功，现在可以直接使用 --eudic 参数")
+        exit(0)
+
     # only add word into vocabulary.txt line by line
     elif options.word:
         WORD = options.word
-        vocab_path = os.path.join(config_path, "vocabulary.txt")
-        with open(vocab_path, "a") as f:
-            f.write(WORD + "\n")
-        logger.info(f"单词: {WORD} 已添加进 {vocab_path}")
+        if add_word_to_vocabulary(WORD):
+            logger.info(f"单词: {WORD} 已添加进词汇表")
+        else:
+            logger.info(f"单词: {WORD} 已存在于词汇表中")
         exit(0)
 
     words = []
@@ -181,14 +339,12 @@ def main():
 
         # 根据模型类型设置对应的 API 密钥
         model_class = MODEL_DICT[MODEL].__module__.split(".")[-1]
-        if model_class == "gpt":
-            API_KEY = options.openai_key or env.get("OPENAI_API_KEY") or API_KEY
-        elif model_class in ("siliconflow", "deepseek"):
-            API_KEY = (
-                options.deepseek_key or env.get("DEEPSEEK_API_KEY") or API_KEY
-            )
-        elif model_class == "gemini":
-            API_KEY = options.gemini_key or env.get("GEMINI_API_KEY") or API_KEY
+        if model_class == "siliconflow":
+            API_KEY = options.siliconflow_key or env.get("SILICONFLOW_API_KEY") or API_KEY
+        elif model_class == "openrouter":
+            # 对于OpenRouter，使用OPENROUTER_API_KEY和OPENROUTER_API_BASE
+            API_KEY = env.get("OPENROUTER_API_KEY") or cfg.get("OPENROUTER_API_KEY", "")
+            API_BASE = cfg.get("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1")
 
         if not API_KEY:
             logger.error(f"缺少{model_class} API 密钥")
@@ -196,7 +352,10 @@ def main():
 
         # 5. 初始化 AI 模型
         try:
-            ai = MODEL_DICT[MODEL](MODEL, API_KEY, API_BASE)
+            if model_class == "openrouter":
+                ai = MODEL_DICT[MODEL](API_KEY, API_BASE, MODEL)
+            else:
+                ai = MODEL_DICT[MODEL](MODEL, API_KEY, API_BASE)
             logger.info(f"当前使用的 AI 模型: {MODEL}")
         except Exception as e:
             logger.error(f"初始化 AI 模型失败: {e}")
@@ -230,7 +389,7 @@ def main():
             logger.error(f"读取文件 {txt_file_path} 出错: {e}")
             exit(1)
     else:
-        vocab_path = os.path.join(config_path, "vocabulary.txt")
+        vocab_path = os.path.join(config_dir, "vocabulary.txt")
         logger.info(f"配置: 对默认生词本单词 {vocab_path} 进行处理...")
         try:
             with open(vocab_path, "r") as vocab:
@@ -257,47 +416,58 @@ def main():
     def process_word(word, ai, anki, youdao, ecdict, audio_files, pbar):
         data = {}
         data["Word"] = word
+        try:
+            # Get audio pronunciation from gtts
+            audio_path = youdao._get_audio(word)
+            if not audio_path:
+                raise Exception("Failed to get audio")
 
-        # Get audio pronunciation from gtts
-        audio_path = youdao._get_audio(word)
-        if not audio_path:
-            raise Exception("Failed to get audio")
+            audio_files.append(audio_path)
+            # 只使用文件名作为 sound 标签的值
+            audio_filename = os.path.basename(audio_path)
+            data["Pronunciation"] = audio_filename
 
-        audio_files.append(audio_path)
-        # 只使用文件名作为 sound 标签的值
-        audio_filename = os.path.basename(audio_path)
-        data["Pronunciation"] = audio_filename
+            # Get ECDICT definition
+            dict_def = ecdict.ret_word(word)
+            if not dict_def:
+                raise Exception("Failed to get ECDICT definition")
+            data["ECDict"] = dict_def
 
-        # Get ECDICT definition
-        dict_def = ecdict.ret_word(word)
-        if not dict_def:
-            raise Exception("Failed to get ECDICT definition")
-        data["ECDict"] = dict_def
+            # Get Youdao dictionary information
+            youdao_result = youdao.get_word_info(word)
+            if not youdao_result:
+                raise Exception("Failed to get Youdao information")
 
-        # Get Youdao dictionary information
-        youdao_result = youdao.get_word_info(word)
-        if not youdao_result:
-            raise Exception("Failed to get Youdao information")
+            data["Youdao"] = youdao_result
 
-        data["Youdao"] = youdao_result
-
-        # Get AI explanation if AI is enabled
-        if ai is not None:
-            try:
+            # Get AI explanation if AI is enabled
+            if ai is not None:
                 ai_explanation = ai.explain(word)
                 data["AI"] = ai_explanation
-            except Exception as e:
-                raise Exception(f"Failed to get AI explanation: {str(e)}")
-        else:
-            data["AI"] = {}
+            else:
+                data["AI"] = {}
 
-        # TODO: Longman English explain
+            # 辨析字段AI补全
+            if not data["ECDict"].get("diffrentiation") and ai is not None:
+                try:
+                    ai_explanation = ai.explain(word)
+                    if ai_explanation and "discrimination" in ai_explanation:
+                        data["ECDict"]["diffrentiation"] = ai_explanation["discrimination"]
+                except Exception as e:
+                    logger.warning(f"AI补全辨析内容失败: {e}")
 
-        # Add note to deck
-        anki.add_note(data)
-        pbar.update(1)
-        pbar.set_description(f"单词 {word} 添加成功")
-        return True
+            # TODO: Longman English explain
+
+            # Add note to deck
+            anki.add_note(data)
+            pbar.update(1)
+            pbar.set_description(f"单词 {word} 添加成功")
+            return True
+        except Exception as e:
+            print(f"单词 {word} 不存在或处理失败，已跳过: {e}")
+            with open('config/failed.txt', 'a', encoding='utf-8') as f:
+                f.write(f"{word}\n")
+            return
 
     retry_words = []
     for word in words:
@@ -319,11 +489,11 @@ def main():
                 failed_words.append(word)
 
         if failed_words:
-            failed_file = os.path.join(config_path, "failed.txt")
+            failed_file = os.path.join(config_dir, "failed.txt")
             with open(failed_file, "w") as f:
                 for word in failed_words:
                     f.write(f"{word}\n")
-            logger.info(f"处理失败的单词已写入: {config_path}/failed.txt")
+            logger.info(f"处理失败的单词已写入: {config_dir}/failed.txt")
 
     # 关闭 pbar 避免多输出一次
     pbar.close()

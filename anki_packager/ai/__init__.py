@@ -1,11 +1,8 @@
-from anki_packager.ai.gpt import ChatGPT
-from anki_packager.ai.gemini import Gemini
 from anki_packager.ai.siliconflow import SiliconFlow
+from anki_packager.ai.openrouter import OpenRouter
 
 MODEL_DICT = {
-    "gpt-4o": ChatGPT,
-    "deepseek-ai/DeepSeek-V2.5": SiliconFlow,
-    "deepseek-ai/DeepSeek-V3": SiliconFlow,
     "Pro/deepseek-ai/DeepSeek-V3": SiliconFlow,
-    "gemini-2.0-flash": Gemini,
+    "openai/gpt-4.1-mini": OpenRouter,
+    "openai/gpt-4.1-nano": OpenRouter,
 }

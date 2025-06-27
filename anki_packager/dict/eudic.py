@@ -1,5 +1,8 @@
 import requests
+import json
+import os
 from anki_packager.logger import logger
+from anki_packager.utils import get_user_config_dir
 
 
 # https://my.eudic.net/OpenAPI/doc_api_study#-studylistapi-getcategory
@@ -29,6 +32,39 @@ class EUDIC:
             logger.info(f"id: {book['id']}, name: {book['name']}")
 
         return response.json()
+
+    def auto_set_first_studylist_id(self):
+        """自动获取并保存第一个生词本的ID到配置文件"""
+        try:
+            response = requests.get(self.studylist_url, headers=self.header)
+            self.check_token(response.status_code)
+            
+            data = response.json()["data"]
+            if data:
+                first_book = data[0]
+                first_id = str(first_book['id'])
+                first_name = first_book['name']
+                
+                # 更新配置文件
+                config_dir = get_user_config_dir()
+                config_file = os.path.join(config_dir, "config.json")
+                
+                with open(config_file, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                
+                cfg["EUDIC_ID"] = first_id
+                
+                with open(config_file, "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, indent=2, ensure_ascii=False)
+                
+                logger.info(f"已自动设置欧陆词典ID为: {first_id} ({first_name})")
+                return first_id
+            else:
+                logger.error("未找到任何生词本")
+                return None
+        except Exception as e:
+            logger.error(f"自动设置欧陆词典ID失败: {e}")
+            return None
 
     def get_words(self):
         url = self.words_url + str(self.id) + "?language=en&category_id=0"

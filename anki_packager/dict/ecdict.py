@@ -2,7 +2,7 @@ import os
 import sqlite3
 
 from anki_packager.logger import logger
-from anki_packager.utils import get_user_config_dir
+from anki_packager.utils import get_user_config_dir, get_dicts_dir
 
 from anki_packager.dict import stardict
 
@@ -14,10 +14,10 @@ from mdict_utils.utils import ElapsedTimer
 class Ecdict:
     def __init__(self):
         self.config_dir = get_user_config_dir()
-        self.dicts_dir = os.path.join(self.config_dir, "dicts")
+        self.dicts_dir = get_dicts_dir()
         # keep the package archive small
         # self.seven_zip = os.path.join(self.dicts_dir, "stardict.7z")
-        self.seven_zip = "D:/Code/anki_packager/anki_packager/dict/stardict.7z"  # 直接写绝对路径
+        self.seven_zip = os.path.join(self.dicts_dir, "stardict.7z")  # 使用新的字典目录
         self.csv = os.path.join(self.dicts_dir, "stardict.csv")
         self.sqlite = os.path.join(self.dicts_dir, "stardict.db")
         self._convert()
@@ -84,8 +84,7 @@ class Ecdict:
         """
         with ElapsedTimer(verbose=False):
             mdx_path = os.path.join(
-                get_user_config_dir(),
-                "dicts",
+                get_dicts_dir(),
                 "单词释义比例词典-带词性.mdx",
             )
             record = query(mdx_path, data["word"])
@@ -97,7 +96,7 @@ class Ecdict:
         """[《有道词语辨析》加强版](https://skywind.me/blog/archives/2941)"""
         with ElapsedTimer(verbose=False):
             mdx_path = os.path.join(
-                get_user_config_dir(), "dicts", "有道词语辨析.mdx"
+                get_dicts_dir(), "有道词语辨析.mdx"
             )
             record = query(mdx_path, data["word"])
             if record:

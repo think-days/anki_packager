@@ -263,3 +263,36 @@ fabric.properties
 
 # macOS shit
 .DS_Store
+
+# Anki Packager specific ignores
+# Configuration files (contain API keys and personal settings)
+config/
+!config/config.json.example
+
+# Audio files (generated content)
+audio/
+
+# Generated Anki packages
+*.apkg
+
+# Dictionary files (large files)
+dicts/*.7z
+dicts/*.csv
+dicts/*.db
+dicts/*.mdx
+dicts/*.rar
+
+# Log files
+logs/
+*.log
+
+# Failed processing files
+config/failed.txt
+config/ai_failed_json.txt
+
+# Test files
+test.apkg
+
+# Temporary files
+*.tmp
+*.temp

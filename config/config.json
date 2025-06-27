@@ -1,9 +1,11 @@
 {
-  "API_KEY": "",
-  "API_BASE": "",
-  "MODEL": "",
-  "PROXY": "127.0.0.1:63797",
-  "EUDIC_TOKEN": "",
+  "API_KEY": "sk-zpebzjjatlygxopdsqdcgmzzyeodozwtpujfjzhzgmhebkpz",
+  "OPENROUTER_API_KEY": "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",
+  "API_BASE": "https://api.siliconflow.cn",
+  "OPENROUTER_API_BASE": "https://openrouter.ai/api/v1",
+  "MODEL": "openai/gpt-4.1-nano",
+  "PROXY": "127.0.0.1:52428",
+  "EUDIC_TOKEN": "NIS 9JtMsucA16BqPT8hMRBkzeMKlqFOxfWX1Zlft5Qx5ZmbwpxE/xHYAA==",
   "EUDIC_ID": "0",
-  "DECK_NAME": "apkger"
+  "DECK_NAME": "anki_packager"
 }

@@ -3,10 +3,13 @@ import re
 import shutil
 import tempfile
 import requests
+import edge_tts
+import asyncio
 from gtts import gTTS
 from bs4 import BeautifulSoup
 from typing import Dict, Optional
 from anki_packager.logger import logger
+from anki_packager.utils import get_project_root
 
 
 class YoudaoScraper:
@@ -15,21 +18,42 @@ class YoudaoScraper:
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         }
+        self.audio_dir = os.path.join(get_project_root(), "audio")
+        os.makedirs(self.audio_dir, exist_ok=True)
         self.tmp = tempfile.mkdtemp()
 
+    async def generate_edge_tts(self, word, filename):
+        communicate = edge_tts.Communicate(word, voice="en-GB-RyanNeural")
+        await communicate.save(filename)
+
     def _get_audio(self, word: str):
-        """return the filename of the audio and the temp directory that needs to be cleaned up"""
-        filename = os.path.join(self.tmp, f"{word}.mp3")
-        tts = gTTS(text=word, lang="en")
-        tts.save(filename)
+        """优先复用audio目录下的音频文件，否则生成"""
+        filename = os.path.join(self.audio_dir, f"{word}.mp3")
+        if os.path.exists(filename):
+            logger.info(f"音频文件已存在，跳过生成: {word}.mp3")
+            return filename
+        
+        logger.info(f"开始生成音频文件: {word}.mp3")
+        try:
+            asyncio.run(self.generate_edge_tts(word, filename))
+            logger.info(f"音频文件生成成功: {word}.mp3")
+        except Exception as e:
+            logger.warning(f"Edge TTS生成失败，使用gTTS备用方案: {e}")
+            try:
+                tts = gTTS(text=word, lang="en")
+                tts.save(filename)
+                logger.info(f"gTTS音频文件生成成功: {word}.mp3")
+            except Exception as e2:
+                logger.error(f"音频文件生成失败: {word}.mp3 - {e2}")
+                return None
         return filename
 
     def _clean_temp_dir(self):
-        """Clean up a temporary directory and its contents."""
+        """只清理临时目录，不清理audio目录"""
         try:
             if os.path.exists(self.tmp):
                 shutil.rmtree(self.tmp)
-                logger.info(f"音频临时文件夹已清理: {self.tmp}")
+                logger.debug(f"音频临时文件夹已清理: {self.tmp}")
         except Exception as e:
             logger.error(f"音频临时文件夹 {self.tmp} 清理失败: {e}")
 
