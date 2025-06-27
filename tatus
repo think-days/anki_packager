@@ -1,0 +1,5 @@
+[33m3be0fc0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mno-gui-stable[m[33m, [m[1;33mtag: [m[1;33mv1.0.0-no-gui[m[33m)[m feat: 无GUI稳定版本 - 添加单词管理功能、日志自动清理、音频文件优化
+[33m37bf0b0[m[33m ([m[1;32mmain[m[33m)[m Merge branch 'codex/修复配置文件端口和ai模型设置问题' of https://github.com/think-days/anki_packager
+[33m479da12[m Revert "fix: duplicate prompt in ui"
+[33mc64b806[m Add DeepSeek Pro model and update defaults
+[33m609c72d[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: duplicate prompt in ui
