@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Select, Switch, message, Space, Alert } from 'antd';
-import { SaveOutlined, TestOutlined } from '@ant-design/icons';
+import { SaveOutlined, ExperimentOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 
@@ -159,7 +159,7 @@ const Configuration = () => {
                 保存配置
               </Button>
               <Button
-                icon={<TestOutlined />}
+                icon={<ExperimentOutlined />}
                 onClick={handleTest}
                 loading={loading}
               >

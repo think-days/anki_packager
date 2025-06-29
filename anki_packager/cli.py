@@ -417,7 +417,13 @@ def main():
         data = {}
         data["Word"] = word
         try:
-            # Get audio pronunciation from gtts
+            # 首先检查单词是否存在于词典中
+            dict_def = ecdict.ret_word(word)
+            if not dict_def:
+                raise Exception("Failed to get ECDICT definition")
+            data["ECDict"] = dict_def
+
+            # 单词存在后，再生成音频文件
             audio_path = youdao._get_audio(word)
             if not audio_path:
                 raise Exception("Failed to get audio")
@@ -426,12 +432,6 @@ def main():
             # 只使用文件名作为 sound 标签的值
             audio_filename = os.path.basename(audio_path)
             data["Pronunciation"] = audio_filename
-
-            # Get ECDICT definition
-            dict_def = ecdict.ret_word(word)
-            if not dict_def:
-                raise Exception("Failed to get ECDICT definition")
-            data["ECDict"] = dict_def
 
             # Get Youdao dictionary information
             youdao_result = youdao.get_word_info(word)

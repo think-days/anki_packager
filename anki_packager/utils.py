@@ -10,9 +10,10 @@ import shutil
 
 def get_project_root():
     """
-    Returns the project root directory.
+    返回项目根目录。
+    使用当前工作目录，确保在Windows和macOS下都能正常工作。
     """
-    return "D:\\Code\\anki_packager"
+    return os.getcwd()
 
 
 def get_user_config_dir():
