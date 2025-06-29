@@ -1,0 +1,11 @@
+{
+  "API_KEY": "your-siliconflow-api-key-here",
+  "OPENROUTER_API_KEY": "your-openrouter-api-key-here",
+  "API_BASE": "https://api.siliconflow.cn",
+  "OPENROUTER_API_BASE": "https://openrouter.ai/api/v1",
+  "MODEL": "openai/gpt-4.1-nano",
+  "PROXY": "127.0.0.1:7890",
+  "EUDIC_TOKEN": "your-eudic-token",
+  "EUDIC_ID": "0",
+  "DECK_NAME": "anki_packager"
+} 

@@ -298,3 +298,8 @@ test.apkg
 # Temporary files
 *.tmp
 *.temp
+
+# Anki Packager sensitive config files
+config/config.json
+config/vocabulary.txt
+config/failed.txt
