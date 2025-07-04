@@ -11,7 +11,9 @@ import {
   Popconfirm,
   Upload,
   Table,
-  Tooltip
+  Tooltip,
+  Alert,
+  Empty
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -19,8 +21,10 @@ import {
   AudioOutlined,
   UploadOutlined,
   DownloadOutlined,
-  ClearOutlined
+  ClearOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
+import { wordAPI } from '../services/api';
 
 const { TextArea } = Input;
 
@@ -30,26 +34,38 @@ const WordManagement = () => {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [batchWords, setBatchWords] = useState('');
+  const [error, setError] = useState(null);
 
-  // 模拟获取单词列表
   useEffect(() => {
     fetchWords();
   }, []);
 
   const fetchWords = async () => {
-    setLoading(true);
-    // 这里将来会调用后端API
-    setTimeout(() => {
-      setWords([
-        { word: 'hello', hasAudio: true },
-        { word: 'world', hasAudio: true },
-        { word: 'beautiful', hasAudio: true },
-        { word: 'wonderful', hasAudio: true },
-        { word: 'excellent', hasAudio: true },
-        { word: 'test', hasAudio: false },
-      ]);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const data = await wordAPI.getWords();
+        setWords(data.words || []);
+      } catch (apiError) {
+        console.warn('API not available, using mock data:', apiError);
+        // 使用模拟数据
+        setWords([
+          { word: 'hello', hasAudio: true },
+          { word: 'world', hasAudio: true },
+          { word: 'beautiful', hasAudio: true },
+          { word: 'wonderful', hasAudio: true },
+          { word: 'excellent', hasAudio: true },
+          { word: 'test', hasAudio: false },
+        ]);
+      }
+    } catch (err) {
+      setError(err.message);
+      message.error('加载单词列表失败');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleAddWord = async () => {
@@ -58,11 +74,15 @@ const WordManagement = () => {
       return;
     }
     
-    // 这里将来会调用后端API
-    setWords(prev => [...prev, { word: newWord.trim(), hasAudio: false }]);
-    setNewWord('');
-    setAddModalVisible(false);
-    message.success('单词添加成功');
+    try {
+      await wordAPI.addWord(newWord.trim());
+      setWords(prev => [...prev, { word: newWord.trim(), hasAudio: false }]);
+      setNewWord('');
+      setAddModalVisible(false);
+      message.success('单词添加成功');
+    } catch (err) {
+      message.error(`添加单词失败: ${err.message}`);
+    }
   };
 
   const handleAddBatchWords = async () => {
@@ -72,28 +92,51 @@ const WordManagement = () => {
     }
     
     const wordList = batchWords.split('\n').map(w => w.trim()).filter(w => w);
-    // 这里将来会调用后端API
-    setWords(prev => [...prev, ...wordList.map(word => ({ word, hasAudio: false }))]);
-    setBatchWords('');
-    setAddModalVisible(false);
-    message.success(`成功添加 ${wordList.length} 个单词`);
+    if (wordList.length === 0) {
+      message.error('请输入有效的单词');
+      return;
+    }
+    
+    try {
+      await wordAPI.addBatchWords(wordList);
+      setWords(prev => [...prev, ...wordList.map(word => ({ word, hasAudio: false }))]);
+      setBatchWords('');
+      setAddModalVisible(false);
+      message.success(`成功添加 ${wordList.length} 个单词`);
+    } catch (err) {
+      message.error(`批量添加失败: ${err.message}`);
+    }
   };
 
   const handleDeleteWord = async (word) => {
-    // 这里将来会调用后端API
-    setWords(prev => prev.filter(w => w.word !== word));
-    message.success('单词删除成功');
+    try {
+      await wordAPI.deleteWord(word);
+      setWords(prev => prev.filter(w => w.word !== word));
+      message.success('单词删除成功');
+    } catch (err) {
+      message.error(`删除单词失败: ${err.message}`);
+    }
   };
 
   const handleClearWords = async () => {
-    // 这里将来会调用后端API
-    setWords([]);
-    message.success('单词列表已清空');
+    try {
+      await wordAPI.clearWords();
+      setWords([]);
+      message.success('单词列表已清空');
+    } catch (err) {
+      message.error(`清空单词失败: ${err.message}`);
+    }
   };
 
   const handleCleanupAudio = async () => {
-    // 这里将来会调用后端API
-    message.success('孤立音频文件清理完成');
+    try {
+      await wordAPI.cleanupAudio();
+      message.success('孤立音频文件清理完成');
+      // 重新加载单词列表以更新音频状态
+      fetchWords();
+    } catch (err) {
+      message.error(`清理音频失败: ${err.message}`);
+    }
   };
 
   const columns = [
@@ -137,13 +180,38 @@ const WordManagement = () => {
     },
   ];
 
+  if (error) {
+    return (
+      <Alert
+        message="加载失败"
+        description={error}
+        type="error"
+        showIcon
+        action={
+          <Button size="small" danger onClick={fetchWords}>
+            重试
+          </Button>
+        }
+      />
+    );
+  }
+
   return (
     <div>
-      <h2>单词管理</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h2>单词管理</h2>
+        <Button 
+          icon={<ReloadOutlined />} 
+          onClick={fetchWords}
+          loading={loading}
+        >
+          刷新
+        </Button>
+      </div>
       
       {/* 操作按钮 */}
       <Card style={{ marginBottom: 16 }}>
-        <Space>
+        <Space wrap>
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
@@ -165,6 +233,7 @@ const WordManagement = () => {
           </Button>
           <Popconfirm
             title="确定要清空所有单词吗？"
+            description="此操作不可恢复，请谨慎操作"
             onConfirm={handleClearWords}
             okText="确定"
             cancelText="取消"
@@ -189,6 +258,9 @@ const WordManagement = () => {
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 个单词`,
           }}
+          locale={{
+            emptyText: <Empty description="暂无单词" />
+          }}
         />
       </Card>
 
@@ -205,6 +277,7 @@ const WordManagement = () => {
         okText="添加"
         cancelText="取消"
         width={600}
+        destroyOnClose
       >
         <Space direction="vertical" style={{ width: '100%' }}>
           <div>

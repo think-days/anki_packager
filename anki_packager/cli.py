@@ -314,7 +314,12 @@ def main():
 
     anki = AnkiDeckCreator(f"{DECK_NAME}")
     ecdict = Ecdict()
-    youdao = YoudaoScraper()
+    
+    # 获取代理设置
+    current_proxy = options.proxy or PROXY
+    
+    # 初始化 YoudaoScraper 并传递代理参数
+    youdao = YoudaoScraper(proxy=current_proxy)
 
     # AI 配置
     if options.disable_ai:
@@ -416,14 +421,22 @@ def main():
     def process_word(word, ai, anki, youdao, ecdict, audio_files, pbar):
         data = {}
         data["Word"] = word
+        audio_path = None
+        
         try:
-            # 首先检查单词是否存在于词典中
+            # 1. 首先检查单词是否存在于词典中
             dict_def = ecdict.ret_word(word)
             if not dict_def:
                 raise Exception("Failed to get ECDICT definition")
             data["ECDict"] = dict_def
 
-            # 单词存在后，再生成音频文件
+            # 2. 获取有道词典信息
+            youdao_result = youdao.get_word_info(word)
+            if not youdao_result:
+                raise Exception("Failed to get Youdao information")
+            data["Youdao"] = youdao_result
+
+            # 3. 生成音频文件（只有在前面步骤都成功后才生成）
             audio_path = youdao._get_audio(word)
             if not audio_path:
                 raise Exception("Failed to get audio")
@@ -433,21 +446,14 @@ def main():
             audio_filename = os.path.basename(audio_path)
             data["Pronunciation"] = audio_filename
 
-            # Get Youdao dictionary information
-            youdao_result = youdao.get_word_info(word)
-            if not youdao_result:
-                raise Exception("Failed to get Youdao information")
-
-            data["Youdao"] = youdao_result
-
-            # Get AI explanation if AI is enabled
+            # 4. 获取AI解释（如果启用）
             if ai is not None:
                 ai_explanation = ai.explain(word)
                 data["AI"] = ai_explanation
             else:
                 data["AI"] = {}
 
-            # 辨析字段AI补全
+            # 5. 辨析字段AI补全
             if not data["ECDict"].get("diffrentiation") and ai is not None:
                 try:
                     ai_explanation = ai.explain(word)
@@ -456,44 +462,49 @@ def main():
                 except Exception as e:
                     logger.warning(f"AI补全辨析内容失败: {e}")
 
-            # TODO: Longman English explain
-
-            # Add note to deck
+            # 6. 添加笔记到牌组
             anki.add_note(data)
             pbar.update(1)
             pbar.set_description(f"单词 {word} 添加成功")
             return True
+            
         except Exception as e:
-            print(f"单词 {word} 不存在或处理失败，已跳过: {e}")
+            # 如果处理失败，清理已创建的音频文件
+            if audio_path and os.path.exists(audio_path):
+                try:
+                    os.remove(audio_path)
+                    logger.info(f"清理失败的音频文件: {audio_path}")
+                except Exception as cleanup_error:
+                    logger.warning(f"清理音频文件失败: {cleanup_error}")
+            
+            logger.error(f"单词 {word} 处理失败: {e}")
             with open('config/failed.txt', 'a', encoding='utf-8') as f:
                 f.write(f"{word}\n")
-            return
+            return False
 
     retry_words = []
     for word in words:
-        try:
-            process_word(word, ai, anki, youdao, ecdict, audio_files, pbar)
-        except Exception as e:
+        success = process_word(word, ai, anki, youdao, ecdict, audio_files, pbar)
+        if not success:
             retry_words.append(word)
-            logger.info(f"单词{word}处理出错: {e}，将会重试...")
-            continue
 
     if retry_words:
-        logger.info("对处理出错单词进行重试...")
+        logger.info(f"对 {len(retry_words)} 个处理出错的单词进行重试...")
         failed_words = []
         for word in retry_words:
-            try:
-                process_word(word, ai, anki, youdao, ecdict, audio_files, pbar)
-            except Exception as e:
-                logger.error(f"重试仍然失败... '{word}': {e}")
+            logger.info(f"重试处理单词: {word}")
+            success = process_word(word, ai, anki, youdao, ecdict, audio_files, pbar)
+            if not success:
                 failed_words.append(word)
+                logger.error(f"重试仍然失败: {word}")
 
         if failed_words:
             failed_file = os.path.join(config_dir, "failed.txt")
-            with open(failed_file, "w") as f:
+            with open(failed_file, "w", encoding='utf-8') as f:
                 for word in failed_words:
                     f.write(f"{word}\n")
-            logger.info(f"处理失败的单词已写入: {config_dir}/failed.txt")
+            logger.info(f"处理失败的单词已写入: {failed_file}")
+            logger.info(f"最终失败单词数量: {len(failed_words)}")
 
     # 关闭 pbar 避免多输出一次
     pbar.close()

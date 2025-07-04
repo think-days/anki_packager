@@ -13,7 +13,7 @@ from anki_packager.utils import get_project_root
 
 
 class YoudaoScraper:
-    def __init__(self):
+    def __init__(self, proxy=None):
         self.base_url = "https://m.youdao.com/result"
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
@@ -21,6 +21,17 @@ class YoudaoScraper:
         self.audio_dir = os.path.join(get_project_root(), "audio")
         os.makedirs(self.audio_dir, exist_ok=True)
         self.tmp = tempfile.mkdtemp()
+        
+        # 设置代理
+        self.proxies = None
+        if proxy:
+            if not proxy.startswith(('http://', 'https://')):
+                proxy = f"http://{proxy}"
+            self.proxies = {
+                'http': proxy,
+                'https': proxy
+            }
+            logger.info(f"有道词典使用代理: {proxy}")
 
     async def generate_edge_tts(self, word, filename):
         communicate = edge_tts.Communicate(word, voice="en-GB-RyanNeural")
@@ -40,6 +51,11 @@ class YoudaoScraper:
         except Exception as e:
             logger.warning(f"Edge TTS生成失败，使用gTTS备用方案: {e}")
             try:
+                # 为 gTTS 设置代理
+                if self.proxies and 'https' in self.proxies:
+                    os.environ['HTTPS_PROXY'] = self.proxies['https']
+                    os.environ['HTTP_PROXY'] = self.proxies['http']
+                
                 tts = gTTS(text=word, lang="en")
                 tts.save(filename)
                 logger.info(f"gTTS音频文件生成成功: {word}.mp3")
@@ -61,7 +77,7 @@ class YoudaoScraper:
         try:
             params = {"word": word, "lang": "en"}
 
-            response = requests.get(self.base_url, params=params, headers=self.headers)
+            response = requests.get(self.base_url, params=params, headers=self.headers, proxies=self.proxies)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, "html.parser")
