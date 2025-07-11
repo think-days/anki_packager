@@ -1,0 +1,261 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anki Packager</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2563eb;
+            margin-bottom: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid #2563eb;
+            color: #2563eb;
+        }
+        .btn-outline:hover {
+            background-color: #f0f9ff;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .message {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .success {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+<body>
+    <h1>Anki Packager</h1>
+    <p>自动生成高质量的英语学习卡片，集成多源词典和AI辅助记忆</p>
+    
+    <div class="message success" id="successMessage"></div>
+    <div class="message error" id="errorMessage"></div>
+    
+    <div class="card">
+        <h2>添加单词</h2>
+        <div class="input-group">
+            <input type="text" id="wordInput" placeholder="输入单词...">
+        </div>
+        <button class="btn" onclick="addWord()">添加单词</button>
+    </div>
+    
+    <div class="card">
+        <h2>功能概览</h2>
+        <div class="grid">
+            <div>
+                <h3>单词管理</h3>
+                <p>添加、删除和管理您的单词列表</p>
+                <button class="btn" onclick="showWords()">管理单词</button>
+            </div>
+            <div>
+                <h3>音频管理</h3>
+                <p>管理单词的音频文件</p>
+                <button class="btn" onclick="alert('功能开发中')">管理音频</button>
+            </div>
+            <div>
+                <h3>AI缓存</h3>
+                <p>管理AI生成的内容缓存</p>
+                <button class="btn" onclick="alert('功能开发中')">管理缓存</button>
+            </div>
+            <div>
+                <h3>牌组管理</h3>
+                <p>生成和管理Anki牌组</p>
+                <button class="btn" onclick="alert('功能开发中')">管理牌组</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>系统状态</h2>
+        <p>单词总数: <span id="wordCount">0</span></p>
+        <p>音频文件: <span id="audioCount">0</span></p>
+        <p>AI缓存: <span id="cacheCount">0</span></p>
+        <button class="btn" onclick="refreshStats()">刷新统计</button>
+        <button class="btn btn-outline" onclick="resetSystem()">重置系统</button>
+    </div>
+    
+    <div class="card" id="wordList" style="display: none;">
+        <h2>单词列表</h2>
+        <div id="wordListContent"></div>
+    </div>
+    
+    <script>
+        // 添加单词
+        async function addWord() {
+            const wordInput = document.getElementById('wordInput');
+            const word = wordInput.value.trim();
+            
+            if (!word) {
+                showError('请输入单词');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/words', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ word })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(`已添加单词: ${word}`);
+                    wordInput.value = '';
+                    refreshStats();
+                } else {
+                    showError(data.message || '添加单词失败');
+                }
+            } catch (error) {
+                showError('请求失败: ' + error.message);
+            }
+        }
+        
+        // 显示单词列表
+        async function showWords() {
+            const wordList = document.getElementById('wordList');
+            const wordListContent = document.getElementById('wordListContent');
+            
+            try {
+                const response = await fetch('/api/words');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    wordListContent.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        wordListContent.innerHTML = '<p>词汇表为空</p>';
+                    } else {
+                        const ul = document.createElement('ul');
+                        data.forEach(item => {
+                            const li = document.createElement('li');
+                            li.textContent = item.word;
+                            ul.appendChild(li);
+                        });
+                        wordListContent.appendChild(ul);
+                    }
+                    
+                    wordList.style.display = 'block';
+                } else {
+                    showError(data.error || '获取单词列表失败');
+                }
+            } catch (error) {
+                showError('请求失败: ' + error.message);
+            }
+        }
+        
+        // 刷新统计
+        async function refreshStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('wordCount').textContent = data.wordCount;
+                    document.getElementById('audioCount').textContent = data.audioCount;
+                    document.getElementById('cacheCount').textContent = data.cacheCount;
+                } else {
+                    showError(data.error || '获取统计信息失败');
+                }
+            } catch (error) {
+                showError('请求失败: ' + error.message);
+            }
+        }
+        
+        // 重置系统
+        function resetSystem() {
+            if (confirm('确定要重置系统吗？这将清空所有数据。')) {
+                alert('重置功能开发中');
+            }
+        }
+        
+        // 显示成功消息
+        function showSuccess(message) {
+            const successMessage = document.getElementById('successMessage');
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 显示错误消息
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 初始加载统计数据
+        refreshStats();
+    </script>
+</body>
+</html>
