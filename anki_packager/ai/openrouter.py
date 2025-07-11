@@ -4,6 +4,7 @@ import logging
 from typing import Dict, Any
 from openai import OpenAI
 from anki_packager.prompt import PROMPT
+from anki_packager.cache import ai_cache
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,13 @@ class OpenRouter:
         )
 
     def explain(self, word: str) -> Dict[str, any]:
+        # 先检查缓存
+        word = word.lower().strip()
+        cached_result = ai_cache.get(word)
+        if cached_result:
+            logger.info(f"使用缓存的AI结果: {word}")
+            return cached_result
+            
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -37,9 +45,31 @@ class OpenRouter:
             # 直接尝试解析JSON，不做复杂清洗
             try:
                 result = json.loads(content)
+                # 缓存成功的结果
+                ai_cache.set(word, result)
                 return result
             except json.JSONDecodeError as e:
                 logger.warning(f"JSON parsing failed for '{word}': {e}")
+                
+                # 尝试修复常见的JSON错误
+                fixed_content = self.try_fix_json_common_errors(content)
+                try:
+                    result = json.loads(fixed_content)
+                    logger.info(f"JSON fixed successfully for '{word}'")
+                    # 缓存修复后的结果
+                    ai_cache.set(word, result)
+                    return result
+                except json.JSONDecodeError:
+                    logger.warning(f"JSON fixing failed for '{word}'")
+                
+                # 尝试模式匹配方法提取内容
+                try:
+                    result = self.extract_content_by_patterns(content, word)
+                    # 缓存提取的结果
+                    ai_cache.set(word, result)
+                    return result
+                except Exception as e:
+                    logger.error(f"Pattern extraction failed for '{word}': {e}")
                 
                 # 如果JSON解析失败，记录原始内容并返回默认结构
                 try:
@@ -51,7 +81,9 @@ class OpenRouter:
                 except:
                     pass
                 
-                return self.get_default_structure(word)
+                default_structure = self.get_default_structure(word)
+                # 不缓存默认结构，因为它只是临时的占位符
+                return default_structure
                         
         except Exception as e:
             logger.error(f"OpenRouter AI request failed for '{word}': {e}")
@@ -68,7 +100,7 @@ class OpenRouter:
         
         # 修复缺少逗号的问题
         # 在对象属性之间添加逗号
-        s = re.sub(r'("(?:word|etymology|associative|homophone|tenses|discrimination|english|chinese)"\s*:\s*"[^"]*")\s*("(?:word|etymology|associative|homophone|tenses|discrimination|english|chinese)"\s*:\s*"[^"]*")', r'\1, \2', s)
+        s = re.sub(r'("(?:word|etymology|associative|homophone|tenses|discrimination|definition|english|chinese)"\s*:\s*"[^"]*")\s*("(?:word|etymology|associative|homophone|tenses|discrimination|definition|english|chinese)"\s*:\s*"[^"]*")', r'\1, \2', s)
         
         # 修复mnemonic对象中缺少逗号的问题
         s = re.sub(r'("(?:associative|homophone)"\s*:\s*"[^"]*")\s*("(?:associative|homophone)"\s*:\s*"[^"]*")', r'\1, \2', s)
@@ -245,20 +277,34 @@ class OpenRouter:
             return self.get_default_structure(word)
 
     def get_default_structure(self, word):
-        """返回默认的AI内容结构"""
+        """创建一个默认的结构，用于API调用失败时"""
         return {
             "word": word,
             "origin": {
                 "etymology": f"单词 {word} 的词源信息暂时无法获取。",
                 "mnemonic": {
-                    "associative": f"联想记忆：{word} 的相关联想暂时无法生成。",
-                    "homophone": f"谐音记忆：{word} 的谐音记忆暂时无法生成。"
+                    "associative": f"{word} 的联想记忆暂时无法生成。",
+                    "homophone": f"{word} 的谐音记忆暂时无法生成。"
                 }
             },
             "tenses": f"{word} 的词形变化暂时无法获取。",
-            "discrimination": f"单词 {word} 的辨析内容暂时无法获取。",
+            "discrimination": f"{word} 的辨析内容暂时无法获取。",
+            "definition": f"The definition for {word} is temporarily unavailable.",
             "story": {
                 "english": f"A story about {word} is temporarily unavailable.",
                 "chinese": f"关于 {word} 的故事暂时无法获取。"
-            }
+            },
+            "phrases": [
+                {
+                    "english": f"{word}",
+                    "chinese": f"{word}的常用短语暂时无法获取"
+                }
+            ],
+            "sentences": [
+                {
+                    "english": f"Example sentence with {word} is unavailable.",
+                    "chinese": f"包含{word}的例句暂时无法获取",
+                    "source": ""
+                }
+            ]
         } 

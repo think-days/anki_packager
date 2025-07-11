@@ -36,10 +36,15 @@
   - 自动抓取有道词典优质例句和常用短语
   - 支持谷歌 TTS 发音、中英双解、考纲标记等功能
   - 支持流行 AI 模型（需要 API-KEY）对单词进行总结、助记及和情境故事生成
+  - **新增** AI结果本地缓存，减少API调用，提高性能
 - **便捷的数据导入**：支持欧路词典生词本一键导入并批量处理单词列表，自动生成卡片
 - **优良的命令行体验**：显示处理进度，支持记录错误、支持丰富的命令行参数
 - **支持 Docker 运行、支持 PyPI 安装**
-- **完善的单词管理功能**：支持添加、删除、清空单词，音频文件管理，孤立文件清理等
+- **完善的资源管理功能**：
+  - **新增** 单词完整删除（一键删除单词及其所有相关资源）
+  - **新增** AI缓存管理（查看、删除、清理）
+  - 支持音频文件管理，孤立资源自动清理
+  - **新增** 详细资源统计信息展示
 
 ### 卡片预览
 
@@ -123,14 +128,25 @@ apkger --eudicid
 apkger --eudic
 
 # 单词管理功能
-apkger --list-words          # 列出所有单词
-apkger --remove-word hello   # 删除指定单词
-apkger --clear-words         # 清空所有单词
-apkger --list-audio          # 列出所有音频文件
-apkger --delete-audio hello  # 删除指定音频
-apkger --clear-audio         # 清空所有音频
-apkger --cleanup-audio       # 清理孤立音频文件
-apkger --stats               # 显示统计信息
+apkger --list-words              # 列出所有单词
+apkger --remove-word hello       # 删除指定单词
+apkger --clear-words             # 清空所有单词
+apkger --list-audio              # 列出所有音频文件
+apkger --delete-audio hello      # 删除指定音频
+apkger --clear-audio             # 清空所有音频
+apkger --cleanup-audio           # 清理孤立音频文件
+
+# 新增: 缓存管理功能
+apkger --list-cache              # 列出所有AI缓存
+apkger --delete-cache hello      # 删除特定单词的AI缓存
+apkger --clear-cache             # 清空所有AI缓存
+apkger --cleanup-cache           # 清理孤立的AI缓存
+
+# 新增: 资源管理功能
+apkger --delete-word-completely hello  # 完全删除单词及其所有资源(词汇表、音频、缓存)
+apkger --cleanup-all                   # 清理所有孤立资源(音频和缓存)
+apkger --stats                         # 显示详细资源统计信息
+apkger --reset-all                     # 一键重置所有资源(清空词汇表、删除所有音频、清空缓存、删除牌组)
 ```
 
 <details>
@@ -159,10 +175,11 @@ python -m anki_packager --disable_ai
 # 从生词本读词生成卡片
 python -m anki_packager
 
-# 单词管理示例
+# 单词和资源管理示例
 python -m anki_packager --list-words
 python -m anki_packager --stats
-python -m anki_packager --cleanup-audio
+python -m anki_packager --cleanup-all
+python -m anki_packager --delete-word-completely hello
 ```
 
 </details>
@@ -186,6 +203,26 @@ make shell
 
 </details>
 
+### 新功能说明
+
+#### AI结果缓存系统
+
+- 自动缓存AI生成的内容，减少重复API调用
+- 支持缓存查看、删除、清理等管理功能
+- 提高性能，节省API费用
+
+#### 完整资源管理
+
+- 支持一键完全删除单词及其所有相关资源
+- 自动清理孤立资源（音频文件和AI缓存）
+- 详细的资源统计信息，方便管理和排查问题
+
+#### 词典内容优先
+
+- 优先使用词典内容，AI内容作为补充
+- 当词典内容不完整时，AI内容自动填充缺失部分
+- 确保高质量内容的同时减少对AI的依赖
+
 ## TODO
 
 - [x] ~~集成单词释义比例词典~~
@@ -194,6 +231,8 @@ make shell
 - [x] ~~支持 SiliconFlow~~
 - [x] ~~重新支持 Docker~~
 - [x] ~~发布到 PyPI~~
+- [x] ~~AI结果缓存，提高性能~~
+- [x] ~~完善资源管理功能~~
 - [ ] 支持更多软件生词导出
 - [ ] 支持 Longman 词典
 - [ ] 训练现成的数据包发布 release

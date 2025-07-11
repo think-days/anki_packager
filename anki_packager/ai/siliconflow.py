@@ -93,22 +93,36 @@ class SiliconFlow:
             return s
 
     def create_default_ai_structure(self, word):
-        """当AI解析失败时，创建默认的AI内容结构"""
+        """创建一个默认的AI内容结构，用于API调用失败时"""
         return {
             "word": word,
             "origin": {
                 "etymology": f"单词 {word} 的词源信息暂时无法获取。",
                 "mnemonic": {
-                    "associative": f"联想记忆：{word} 的相关联想暂时无法生成。",
-                    "homophone": f"谐音记忆：{word} 的谐音记忆暂时无法生成。"
+                    "associative": f"{word} 的联想记忆暂时无法生成。",
+                    "homophone": f"{word} 的谐音记忆暂时无法生成。"
                 }
             },
-            "tenses": f"v. {word} 的词形变化暂时无法获取。",
-            "discrimination": f"单词 {word} 的辨析内容暂时无法获取。",
+            "tenses": f"{word} 的词形变化暂时无法获取。",
+            "discrimination": f"{word} 的辨析内容暂时无法获取。",
+            "definition": f"The definition for {word} is temporarily unavailable.",
             "story": {
                 "english": f"A story about {word} is temporarily unavailable.",
                 "chinese": f"关于 {word} 的故事暂时无法获取。"
-            }
+            },
+            "phrases": [
+                {
+                    "english": f"{word}",
+                    "chinese": f"{word}的常用短语暂时无法获取"
+                }
+            ],
+            "sentences": [
+                {
+                    "english": f"Example sentence with {word} is unavailable.",
+                    "chinese": f"包含{word}的例句暂时无法获取",
+                    "source": ""
+                }
+            ]
         }
 
     def extract_ai_content_directly(self, text, word):
@@ -124,6 +138,7 @@ class SiliconFlow:
             },
             "tenses": "",
             "discrimination": "",
+            "definition": "",
             "story": {
                 "english": "",
                 "chinese": ""
@@ -164,6 +179,12 @@ class SiliconFlow:
             discrimination_matches = re.findall(discrimination_pattern, text, re.DOTALL)
             if discrimination_matches:
                 result["discrimination"] = self.clean_content(discrimination_matches[0])
+                
+            # 提取definition (英文释义) - 支持多行内容，取第一个匹配
+            definition_pattern = r'"definition":\s*[""]([^""]*(?:[""][^""]*[""][^""]*)*)[""]'
+            definition_matches = re.findall(definition_pattern, text, re.DOTALL)
+            if definition_matches:
+                result["definition"] = self.clean_content(definition_matches[0])
             
             # 提取story english - 支持多行内容，取第一个匹配
             story_en_pattern = r'"english":\s*[""]([^""]*(?:[""][^""]*[""][^""]*)*)[""]'
@@ -180,7 +201,7 @@ class SiliconFlow:
             # 如果正则提取失败，尝试使用更宽松的模式匹配
             if not any([result["origin"]["etymology"], result["origin"]["mnemonic"]["associative"], 
                        result["origin"]["mnemonic"]["homophone"], result["tenses"], 
-                       result["discrimination"], result["story"]["english"], result["story"]["chinese"]]):
+                       result["discrimination"], result["definition"], result["story"]["english"], result["story"]["chinese"]]):
                 result = self.extract_content_by_patterns(text, word)
                 
         except Exception as e:
@@ -216,6 +237,7 @@ class SiliconFlow:
             },
             "tenses": "",
             "discrimination": "",
+            "definition": "",
             "story": {
                 "english": "",
                 "chinese": ""
@@ -223,45 +245,57 @@ class SiliconFlow:
         }
         # 词源
         ety = pick_first_nonempty(
-            re.search(r'词源[：: ]*([\s\S]{5,300}?)((?:助记|联想|谐音|词形|辨析|故事|$))', text),
-            re.search(r'etymology[：: ]*([\s\S]{5,300}?)((?:mnemonic|associative|homophone|tenses|discrimination|story|$))', text, re.I),
-            re.search(r'来源[：: ]*([\s\S]{5,300}?)((?:助记|联想|谐音|词形|辨析|故事|$))', text),
+            re.search(r'词源[：: ]*([\s\S]{5,300}?)((?:助记|联想|谐音|词形|辨析|英文释义|故事|$))', text),
+            re.search(r'etymology[：: ]*([\s\S]{5,300}?)((?:mnemonic|associative|homophone|tenses|discrimination|definition|story|$))', text, re.I),
+            re.search(r'来源[：: ]*([\s\S]{5,300}?)((?:助记|联想|谐音|词形|辨析|英文释义|故事|$))', text),
             re.search(r'源自[\s\S]{5,100}', text)
         )
         if isinstance(ety, re.Match): ety = ety.group(1)
         result["origin"]["etymology"] = clean(ety)
-        # 联想
-        ass = pick_first_nonempty(
-            re.search(r'联想[记忆]*[：: ]*([\s\S]{3,200}?)((?:谐音|词形|辨析|故事|$))', text),
-            re.search(r'associative[：: ]*([\s\S]{3,200}?)((?:homophone|tenses|discrimination|story|$))', text, re.I)
+        
+        # 联想记忆
+        assoc = pick_first_nonempty(
+            re.search(r'联想[：: ]*([\s\S]{5,300}?)((?:谐音|词形|辨析|英文释义|故事|$))', text),
+            re.search(r'associative[：: ]*([\s\S]{5,300}?)((?:homophone|tenses|discrimination|definition|story|$))', text, re.I)
         )
-        if isinstance(ass, re.Match): ass = ass.group(1)
-        result["origin"]["mnemonic"]["associative"] = clean(ass)
-        # 谐音
+        if isinstance(assoc, re.Match): assoc = assoc.group(1)
+        result["origin"]["mnemonic"]["associative"] = clean(assoc)
+        
+        # 谐音记忆
         homo = pick_first_nonempty(
-            re.search(r'谐音[记忆]*[：: ]*([\s\S]{3,200}?)((?:联想|词形|辨析|故事|$))', text),
-            re.search(r'homophone[：: ]*([\s\S]{3,200}?)((?:associative|tenses|discrimination|story|$))', text, re.I)
+            re.search(r'谐音[：: ]*([\s\S]{5,300}?)((?:词形|辨析|英文释义|故事|$))', text),
+            re.search(r'homophone[：: ]*([\s\S]{5,300}?)((?:tenses|discrimination|definition|story|$))', text, re.I)
         )
         if isinstance(homo, re.Match): homo = homo.group(1)
         result["origin"]["mnemonic"]["homophone"] = clean(homo)
-        # 词形
+        
+        # 词形变化
         tenses = pick_first_nonempty(
-            re.search(r'词形[变化]*[：: ]*([\s\S]{3,200}?)((?:辨析|故事|$))', text),
-            re.search(r'tenses[：: ]*([\s\S]{3,200}?)((?:discrimination|story|$))', text, re.I),
-            re.search(r'v\.[^\n]+', text),
-            re.search(r'n\.[^\n]+', text),
-            re.search(r'adj\.[^\n]+', text)
+            re.search(r'词形[：: ]*([\s\S]{5,300}?)((?:辨析|英文释义|故事|$))', text),
+            re.search(r'tenses[：: ]*([\s\S]{5,300}?)((?:discrimination|definition|story|$))', text, re.I),
+            re.search(r'时态[：: ]*([\s\S]{5,300}?)((?:辨析|英文释义|故事|$))', text)
         )
         if isinstance(tenses, re.Match): tenses = tenses.group(1)
         result["tenses"] = clean(tenses)
+        
         # 辨析
-        disc = pick_first_nonempty(
-            re.search(r'辨析[：: ]*([\s\S]{5,400}?)((?:故事|$))', text),
-            re.search(r'discrimination[：: ]*([\s\S]{5,400}?)((?:story|$))', text, re.I),
-            re.search(r'vs\.[^\n]+', text)
+        discr = pick_first_nonempty(
+            re.search(r'辨析[：: ]*([\s\S]{5,500}?)((?:英文释义|故事|$))', text),
+            re.search(r'discrimination[：: ]*([\s\S]{5,500}?)((?:definition|story|$))', text, re.I),
+            re.search(r'区别[：: ]*([\s\S]{5,500}?)((?:英文释义|故事|$))', text)
         )
-        if isinstance(disc, re.Match): disc = disc.group(1)
-        result["discrimination"] = clean(disc)
+        if isinstance(discr, re.Match): discr = discr.group(1)
+        result["discrimination"] = clean(discr)
+        
+        # 英文释义
+        defn = pick_first_nonempty(
+            re.search(r'英文释义[：: ]*([\s\S]{5,500}?)((?:故事|$))', text),
+            re.search(r'definition[：: ]*([\s\S]{5,500}?)((?:story|phrases|sentences|$))', text, re.I),
+            re.search(r'英文定义[：: ]*([\s\S]{5,500}?)((?:故事|$))', text)
+        )
+        if isinstance(defn, re.Match): defn = defn.group(1)
+        result["definition"] = clean(defn)
+        
         # 英文故事
         story_en = pick_first_nonempty(
             re.search(r'english[：: ]*([\s\S]{10,400}?)((?:chinese|$))', text, re.I),
@@ -271,6 +305,7 @@ class SiliconFlow:
         )
         if isinstance(story_en, re.Match): story_en = story_en.group(1)
         result["story"]["english"] = clean(story_en)
+        
         # 中文故事
         story_cn = pick_first_nonempty(
             re.search(r'chinese[：: ]*([\s\S]{10,400})', text, re.I),
@@ -279,6 +314,7 @@ class SiliconFlow:
         )
         if isinstance(story_cn, re.Match): story_cn = story_cn.group(1)
         result["story"]["chinese"] = clean(story_cn)
+        
         # 兜底：如果某字段为空，填"暂时无法获取"
         if not result["origin"]["etymology"]:
             result["origin"]["etymology"] = "该单词的词源信息暂时无法获取。"
@@ -290,10 +326,13 @@ class SiliconFlow:
             result["tenses"] = f"{word} 的词形变化暂时无法获取。"
         if not result["discrimination"]:
             result["discrimination"] = f"{word} 的辨析内容暂时无法获取。"
+        if not result["definition"]:
+            result["definition"] = f"The definition for {word} is temporarily unavailable."
         if not result["story"]["english"]:
             result["story"]["english"] = f"A story about {word} is temporarily unavailable."
         if not result["story"]["chinese"]:
             result["story"]["chinese"] = f"关于 {word} 的故事暂时无法获取。"
+            
         return result
 
     def extract_content_from_full_text(self, text, word):

@@ -18,7 +18,8 @@ from anki_packager.utils import (
     delete_all_audio_files,
     get_orphaned_audio_files,
     get_missing_audio_files,
-    cleanup_orphaned_audio
+    cleanup_orphaned_audio,
+    reset_all_resources
 )
 
 ### logger
@@ -169,9 +170,53 @@ def main():
     )
 
     parser.add_argument(
+        "--list-cache",
+        action="store_true",
+        help="List all cached AI results",
+    )
+
+    parser.add_argument(
+        "--delete-cache",
+        dest="delete_cache",
+        type=str,
+        help="Delete AI cache for a specific word",
+    )
+
+    parser.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Delete all AI cache",
+    )
+
+    parser.add_argument(
+        "--cleanup-cache",
+        action="store_true",
+        help="Remove orphaned AI cache (cache without corresponding words in vocabulary)",
+    )
+
+    parser.add_argument(
+        "--cleanup-all",
+        action="store_true",
+        help="Clean up all orphaned resources (audio and cache)",
+    )
+
+    parser.add_argument(
+        "--delete-word-completely",
+        dest="delete_word_completely",
+        type=str,
+        help="Completely delete a word and all its resources (vocabulary, audio, cache)",
+    )
+
+    parser.add_argument(
         "--stats",
         action="store_true",
-        help="Show statistics about vocabulary and audio files",
+        help="Show statistics about vocabulary and resources",
+    )
+
+    parser.add_argument(
+        "--reset-all",
+        action="store_true",
+        help="一键重置：清空词汇表、删除所有音频文件、清空所有AI缓存和删除牌组文件",
     )
 
     options = parser.parse_args()
@@ -257,28 +302,114 @@ def main():
             logger.info("没有发现孤立的音频文件")
         exit(0)
 
+    # 缓存管理命令处理
+    elif options.list_cache:
+        from anki_packager.cache import ai_cache
+        cached_words = ai_cache.get_all_cached_words()
+        stats = ai_cache.get_cache_stats()
+        if cached_words:
+            logger.info(f"AI缓存中共有 {len(cached_words)} 个单词，总大小: {stats['cache_size_kb']} KB:")
+            for i, word in enumerate(cached_words, 1):
+                print(f"{i:3d}. {word}")
+        else:
+            logger.info("AI缓存为空")
+        exit(0)
+        
+    elif options.delete_cache:
+        from anki_packager.cache import ai_cache
+        word = options.delete_cache
+        if ai_cache.delete(word):
+            logger.info(f"单词 '{word}' 的AI缓存已删除")
+        else:
+            logger.warning(f"单词 '{word}' 在AI缓存中不存在")
+        exit(0)
+        
+    elif options.clear_cache:
+        from anki_packager.cache import ai_cache
+        count = ai_cache.clear_all()
+        logger.info(f"已删除 {count} 个AI缓存条目")
+        exit(0)
+        
+    elif options.cleanup_cache:
+        from anki_packager.utils import cleanup_all_resources
+        result = cleanup_all_resources()
+        logger.info(f"已清理 {result['orphaned_cache']} 个孤立的AI缓存")
+        exit(0)
+        
+    elif options.delete_word_completely:
+        word = options.delete_word_completely
+        from anki_packager.utils import remove_word_completely
+        result = remove_word_completely(word)
+        
+        if any(result.values()):
+            logger.info(f"单词 '{word}' 已完全删除:")
+            if result["vocabulary"]:
+                logger.info(f"  - 已从生词本中删除")
+            if result["audio"]:
+                logger.info(f"  - 已删除音频文件 '{word}.mp3'")
+            if result["ai_cache"]:
+                logger.info(f"  - 已删除AI缓存")
+        else:
+            logger.warning(f"单词 '{word}' 不存在或删除失败")
+        exit(0)
+        
+    elif options.cleanup_all:
+        from anki_packager.utils import cleanup_all_resources
+        result = cleanup_all_resources()
+        logger.info(f"资源清理完成:")
+        logger.info(f"  - 已删除 {result['orphaned_audio']} 个孤立的音频文件")
+        logger.info(f"  - 已删除 {result['orphaned_cache']} 个孤立的AI缓存")
+        exit(0)
+        
     elif options.stats:
-        vocab_words = read_vocabulary()
-        audio_words = get_audio_files()
-        orphaned = get_orphaned_audio_files()
-        missing = get_missing_audio_files()
+        from anki_packager.utils import get_resources_stats
+        stats = get_resources_stats()
         
-        print("\n=== 词汇和音频文件统计 ===")
-        print(f"词汇表单词数量: {len(vocab_words)}")
-        print(f"音频文件数量: {len(audio_words)}")
-        print(f"孤立音频文件: {len(orphaned)}")
-        print(f"缺少音频的单词: {len(missing)}")
+        print("\n=== 资源统计信息 ===")
+        print(f"词汇表单词数量: {stats['vocabulary']['count']}")
+        print(f"音频文件数量: {stats['audio']['count']}")
+        print(f"孤立音频文件: {stats['audio']['orphaned']['count']}")
+        print(f"缺少音频的单词: {stats['audio']['missing']['count']}")
+        print(f"AI缓存数量: {stats['ai_cache']['count']} (大小: {stats['ai_cache']['size_kb']} KB)")
+        print(f"孤立的AI缓存: {stats['ai_cache']['orphaned']['count']}")
+        print(f"缺少AI缓存的单词: {stats['ai_cache']['missing']['count']}")
         
-        if orphaned:
+        if stats['audio']['orphaned']['count'] > 0:
             print(f"\n孤立音频文件列表:")
-            for word in orphaned:
+            for word in stats['audio']['orphaned']['words']:
                 print(f"  - {word}.mp3")
         
-        if missing:
+        if stats['audio']['missing']['count'] > 0:
             print(f"\n缺少音频的单词列表:")
-            for word in missing:
+            for word in stats['audio']['missing']['words']:
+                print(f"  - {word}")
+                
+        if stats['ai_cache']['orphaned']['count'] > 0:
+            print(f"\n孤立的AI缓存列表:")
+            for word in stats['ai_cache']['orphaned']['words']:
                 print(f"  - {word}")
         
+        exit(0)
+
+    elif options.reset_all:
+        logger.info("执行一键重置操作...")
+        result = reset_all_resources()
+        
+        logger.info(f"重置结果:")
+        if result["vocabulary"]:
+            logger.info(f"  - 词汇表已清空")
+        else:
+            logger.warning(f"  - 词汇表清空失败")
+            
+        logger.info(f"  - 已删除 {result['audio']} 个音频文件")
+        logger.info(f"  - 已清空 {result['ai_cache']} 个AI缓存条目")
+        
+        if result["deck"]:
+            logger.info(f"  - 牌组文件已删除")
+        else:
+            logger.info(f"  - 牌组文件不存在或删除失败")
+            
+        logger.info("重置完成！系统已恢复到初始状态")
         exit(0)
 
     # display eudict id only
@@ -417,48 +548,114 @@ def main():
         data = {}
         data["Word"] = word
         try:
-            # Get audio pronunciation from gtts
+            # 1. 先查词典，判断单词有效性
+            youdao_result = None
+            try:
+                youdao_result = youdao.get_word_info(word)
+            except Exception as e:
+                logger.warning(f"获取有道词典信息失败: {e}")
+            
+            # 2. 获取音频
             audio_path = youdao._get_audio(word)
             if not audio_path:
                 raise Exception("Failed to get audio")
-
             audio_files.append(audio_path)
             # 只使用文件名作为 sound 标签的值
             audio_filename = os.path.basename(audio_path)
             data["Pronunciation"] = audio_filename
 
-            # Get ECDICT definition
+            # 3. 获取 ECDICT 释义
             dict_def = ecdict.ret_word(word)
             if not dict_def:
                 raise Exception("Failed to get ECDICT definition")
             data["ECDict"] = dict_def
 
-            # Get Youdao dictionary information
-            youdao_result = youdao.get_word_info(word)
-            if not youdao_result:
-                raise Exception("Failed to get Youdao information")
-
-            data["Youdao"] = youdao_result
-
-            # Get AI explanation if AI is enabled
+            # 4. 获取 AI 释义（如启用）- 仅作为补充
+            ai_content = {}
             if ai is not None:
-                ai_explanation = ai.explain(word)
-                data["AI"] = ai_explanation
-            else:
-                data["AI"] = {}
-
-            # 辨析字段AI补全
-            if not data["ECDict"].get("diffrentiation") and ai is not None:
                 try:
                     ai_explanation = ai.explain(word)
-                    if ai_explanation and "discrimination" in ai_explanation:
-                        data["ECDict"]["diffrentiation"] = ai_explanation["discrimination"]
+                    ai_content = ai_explanation or {}
+                    
+                    # 处理辨析内容 - 词典优先，AI补充
+                    if not dict_def.get("diffrentiation") and "discrimination" in ai_content:
+                        dict_def["diffrentiation"] = ai_content["discrimination"]
+                    
+                    # 处理英文释义 - ECDICT过于简单时使用AI的详细释义
+                    ecdict_def = dict_def.get("definition", "")
+                    if "definition" in ai_content and ai_content["definition"]:
+                        ai_def = ai_content["definition"]
+                        # 检查ECDICT的释义是否过于简单
+                        if not ecdict_def or len(ecdict_def.split()) < 6:
+                            dict_def["definition"] = ai_def
+                            logger.info(f"使用AI生成的英文释义替换简短的ECDICT释义: {word}")
+                        elif len(ecdict_def.split()) < 15:
+                            # 如果ECDICT释义不太详细，则合并两者
+                            dict_def["definition"] = f"{ecdict_def}; {ai_def}"
+                            logger.info(f"合并ECDICT和AI的英文释义: {word}")
+                    
+                    # 确保AI内容不覆盖词典内容
+                    data["AI"] = ai_content
+                    
+                    # 使用AI生成的短语和例句替代有道爬虫的结果
+                    if ai_content and ("phrases" in ai_content or "sentences" in ai_content):
+                        # 创建一个有道词典格式的结果对象
+                        ai_youdao_result = {
+                            "word": word,
+                            "example_phrases": [],
+                            "example_sentences": []
+                        }
+                        
+                        # 处理短语
+                        if "phrases" in ai_content and isinstance(ai_content["phrases"], list):
+                            for i, phrase in enumerate(ai_content["phrases"], 1):
+                                if isinstance(phrase, dict) and "english" in phrase and "chinese" in phrase:
+                                    ai_youdao_result["example_phrases"].append({
+                                        "index": str(i),
+                                        "english": phrase["english"],
+                                        "chinese": phrase["chinese"]
+                                    })
+                        
+                        # 处理例句
+                        if "sentences" in ai_content and isinstance(ai_content["sentences"], list):
+                            for i, sentence in enumerate(ai_content["sentences"], 1):
+                                if isinstance(sentence, dict) and "english" in sentence and "chinese" in sentence:
+                                    ai_youdao_result["example_sentences"].append({
+                                        "index": str(i),
+                                        "english": sentence["english"],
+                                        "chinese": sentence["chinese"],
+                                        "source": sentence.get("source", "")
+                                    })
+                        
+                        # 优先使用AI生成的内容，如果有有道爬虫结果且AI生成内容为空，则使用有道爬虫结果
+                        if ai_youdao_result["example_phrases"] or ai_youdao_result["example_sentences"]:
+                            youdao_result = ai_youdao_result
+                            logger.info(f"使用AI生成的短语和例句: {word}")
                 except Exception as e:
-                    logger.warning(f"AI补全辨析内容失败: {e}")
+                    logger.warning(f"AI生成内容失败: {e}")
+                    data["AI"] = {}
+            else:
+                data["AI"] = {}
+            
+            # 如果没有有效的短语和例句数据，创建一个基本结构
+            if not youdao_result or (not youdao_result.get("example_phrases") and not youdao_result.get("example_sentences")):
+                youdao_result = {
+                    "word": word,
+                    "example_phrases": [{
+                        "index": "1", 
+                        "english": word, 
+                        "chinese": f"{word}的常用短语暂时无法获取"
+                    }],
+                    "example_sentences": []
+                }
+                logger.warning(f"无法获取单词 {word} 的短语和例句，使用占位符")
+            
+            # 保存最终结果
+            data["Youdao"] = youdao_result
 
             # TODO: Longman English explain
 
-            # Add note to deck
+            # 5. 添加到牌组
             anki.add_note(data)
             pbar.update(1)
             pbar.set_description(f"单词 {word} 添加成功")

@@ -172,6 +172,15 @@ def cleanup_orphaned_audio():
     return count
 
 
+def get_ai_cache_dir():
+    """
+    Returns the AI cache directory path.
+    """
+    cache_dir = os.path.join(get_user_config_dir(), "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    return cache_dir
+
+
 def initialize_config():
     config_dir = get_user_config_dir()
     os.makedirs(config_dir, exist_ok=True)
@@ -205,3 +214,182 @@ def initialize_config():
             f.write("")
 
     print(f"\033[1;31m配置文件位于 {config_path} \033[0m")
+
+
+def remove_word_completely(word):
+    """
+    完全删除一个单词及其相关资源（生词本、音频、AI缓存）。
+    返回一个字典，指示每种资源的删除状态。
+    """
+    result = {
+        "vocabulary": False,  # 生词本
+        "audio": False,       # 音频文件
+        "ai_cache": False,    # AI缓存
+    }
+    
+    # 1. 从生词本删除
+    result["vocabulary"] = remove_word_from_vocabulary(word)
+    
+    # 2. 删除音频文件
+    result["audio"] = delete_audio_file(word)
+    
+    # 3. 删除AI缓存
+    # 延迟导入，避免循环引用
+    from anki_packager.cache import ai_cache
+    result["ai_cache"] = ai_cache.delete(word)
+    
+    return result
+
+def remove_words_completely(words):
+    """
+    批量完全删除多个单词及其相关资源。
+    返回删除成功的单词数量。
+    """
+    success_count = 0
+    for word in words:
+        result = remove_word_completely(word)
+        # 只要有任何一种资源删除成功，就计数
+        if any(result.values()):
+            success_count += 1
+    return success_count
+
+def cleanup_all_resources():
+    """
+    清理所有孤立资源（孤立的音频文件和AI缓存）。
+    返回清理的资源统计信息。
+    """
+    result = {
+        "orphaned_audio": 0,
+        "orphaned_cache": 0
+    }
+    
+    # 1. 获取生词本单词集合
+    vocab_words = set(read_vocabulary())
+    
+    # 2. 清理孤立的音频文件
+    audio_words = set(get_audio_files())
+    orphaned_audio = audio_words - vocab_words
+    for word in orphaned_audio:
+        if delete_audio_file(word):
+            result["orphaned_audio"] += 1
+            
+    # 3. 清理孤立的AI缓存
+    from anki_packager.cache import ai_cache
+    cached_words = set(ai_cache.get_all_cached_words())
+    orphaned_cache = cached_words - vocab_words
+    result["orphaned_cache"] = ai_cache.delete_multiple(list(orphaned_cache))
+    
+    return result
+
+def get_resources_stats():
+    """
+    获取所有资源的统计信息。
+    """
+    # 1. 获取生词本信息
+    vocab_words = read_vocabulary()
+    
+    # 2. 获取音频文件信息
+    audio_words = get_audio_files()
+    orphaned_audio = set(audio_words) - set(vocab_words)
+    missing_audio = set(vocab_words) - set(audio_words)
+    
+    # 3. 获取AI缓存信息
+    from anki_packager.cache import ai_cache
+    cache_stats = ai_cache.get_cache_stats()
+    cached_words = set(cache_stats["words"])
+    orphaned_cache = cached_words - set(vocab_words)
+    missing_cache = set(vocab_words) - cached_words
+    
+    return {
+        "vocabulary": {
+            "count": len(vocab_words),
+            "words": vocab_words
+        },
+        "audio": {
+            "count": len(audio_words),
+            "orphaned": {
+                "count": len(orphaned_audio),
+                "words": list(orphaned_audio)
+            },
+            "missing": {
+                "count": len(missing_audio),
+                "words": list(missing_audio)
+            }
+        },
+        "ai_cache": {
+            "count": cache_stats["total_words"],
+            "size_kb": cache_stats["cache_size_kb"],
+            "orphaned": {
+                "count": len(orphaned_cache),
+                "words": list(orphaned_cache)
+            },
+            "missing": {
+                "count": len(missing_cache),
+                "words": list(missing_cache)
+            }
+        }
+    }
+
+def reset_all_resources():
+    """
+    重置所有资源：清空词汇表、删除所有音频文件、清空所有AI缓存和删除生成的牌组文件
+    
+    Returns:
+        dict: 包含各项操作结果的字典
+    """
+    result = {
+        "vocabulary": False,
+        "audio": 0,
+        "ai_cache": 0,
+        "deck": False
+    }
+    
+    # 清空词汇表
+    try:
+        clear_vocabulary()
+        result["vocabulary"] = True
+    except Exception as e:
+        print(f"清空词汇表失败: {e}")
+    
+    # 删除所有音频文件
+    try:
+        audio_count = delete_all_audio_files()
+        result["audio"] = audio_count
+    except Exception as e:
+        print(f"删除音频文件失败: {e}")
+    
+    # 清空所有AI缓存
+    try:
+        from anki_packager.cache import ai_cache
+        cache_count = ai_cache.clear_all()
+        result["ai_cache"] = cache_count
+    except Exception as e:
+        print(f"清空AI缓存失败: {e}")
+    
+    # 删除生成的牌组文件
+    try:
+        import os
+        from anki_packager.packager.deck import AnkiDeckCreator
+        from anki_packager.logger import logger
+        
+        # 获取默认牌组名称
+        config_dir = get_user_config_dir()
+        config_file = os.path.join(config_dir, "config.json")
+        deck_name = "anki_packager"
+        
+        try:
+            with open(config_file, "r") as cfg_file:
+                import json
+                cfg = json.load(cfg_file)
+                deck_name = cfg.get("DECK_NAME", "anki_packager")
+        except:
+            pass
+        
+        deck_file = f"{deck_name}.apkg"
+        if os.path.exists(deck_file):
+            os.remove(deck_file)
+            result["deck"] = True
+    except Exception as e:
+        print(f"删除牌组文件失败: {e}")
+    
+    return result
