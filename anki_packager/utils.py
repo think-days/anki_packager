@@ -11,8 +11,9 @@ import shutil
 def get_project_root():
     """
     Returns the project root directory.
+    自动检测当前项目根目录，兼容不同操作系统。
     """
-    return "D:\\Code\\anki_packager"
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def get_user_config_dir():

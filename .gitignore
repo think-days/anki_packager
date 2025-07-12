@@ -121,4 +121,10 @@ yarn-error.log
 .next/
 
 # Config files
-config/config.json
+config/config.jsondicts/stardict.db
+dicts/stardict.csv
+dicts/stardict.7z
+audio/*.mp3
+*.rar
+*.mdx
+anki_packager.apkg

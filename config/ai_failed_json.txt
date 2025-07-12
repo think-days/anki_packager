@@ -1,0 +1,21 @@
+
+
+=== OpenRouter AI Failed JSON for 'tomato' ===
+Error: Expecting property name enclosed in double quotes: line 8 column 9 (char 358)
+Content: {
+    "word": "tomato",
+    "origin": {
+        "etymology": "“tomato”一词源自纳瓦荷语中的“tomatl”，意为‘膨胀的果实’，通过西班牙语“tomate”传入英语。最初在欧洲被认为是毒药，直到16世纪才逐渐被接受作为食材。番茄在英国文化中逐渐成为重要的蔬菜和调味品，尤其在英式料理中扮演重要角色。",
+        "mnemonic": {
+            "associative": "想象一个红色的番茄在阳光下闪耀，提醒你它是多汁又鲜美的水果。",
+            "homophone": "“tomato”发音类似于“to-may-to”，可以联想到“我喜欢吃番茄”这句话，帮助记忆它是水果。",
+        }
+    },
+    "tenses": "n. 番茄; adj. 无; v. 无; adv. 无",
+    "discrimination": "番茄与胡椒、茄子等蔬菜常被混淆，但它实际上是一种水果，属于浆果类。与“vegetable”不同，vegetable指的是蔬菜类植物，而tomato则是水果。与“potato”不同，potato是块茎类植物，属于根茎类。",
+    "story": {
+        "english": "On a sunny afternoon, Mr. Smith decided to visit his local market. He was looking for fresh vegetables and spotted a stall filled with ripe, red tomatoes. Remembering his grandmother’s recipe, he bought a dozen tomatoes to make a delicious salad. As he paid the vendor, he noticed a young girl admiring the bright produce and explained that tomatoes are actually fruits, not vegetables. They shared a smile, and Mr. Smith left the market feeling happy with his healthy purchase.",
+        "chinese": "一个阳光明媚的下午，史密斯先生决定去当地的市场。他在寻找新鲜的蔬菜时，看到一个摊位上摆满了成熟红亮的番茄。想起奶奶的食谱，他买了十几个番茄来做一道美味的沙拉。当他付钱给摊贩时，他注意到一个年轻女孩在欣赏那些鲜亮的农产品，他向她解释说番茄其实是水果，不是蔬菜。他们相视一笑，史密斯先生带着满意的心情离开了市场。"
+    }
+}
+==================================================
