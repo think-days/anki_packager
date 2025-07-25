@@ -22,20 +22,21 @@ build:
 	docker volume create $(VOLUME_NAME)
 
 run:
-	docker run --rm \
-		--name $(CONTAINER_NAME) \
-		-v $(VOLUME_NAME):/app/dicts \
-		$(IMAGE_NAME)
+        docker run --rm \
+                --name $(CONTAINER_NAME) \
+                -v $(VOLUME_NAME):/app/dicts \
+                -v $(shell pwd)/config:/root/.config/anki_packager \
+                $(IMAGE_NAME)
 
 # Enter shell in container with volume mounted
 shell:
-	docker run -it --rm \
-		--name $(CONTAINER_NAME) \
-		-v $(VOLUME_NAME):/app/dicts \
-		-v $(shell pwd)/config:/app/config \
-		-v $(shell pwd):/app \
-		--entrypoint /bin/bash \
-		$(IMAGE_NAME)
+        docker run -it --rm \
+                --name $(CONTAINER_NAME) \
+                -v $(VOLUME_NAME):/app/dicts \
+                -v $(shell pwd)/config:/root/.config/anki_packager \
+                -v $(shell pwd):/app \
+                --entrypoint /bin/bash \
+                $(IMAGE_NAME)
 
 clean:
 	-docker rmi $(IMAGE_NAME)

@@ -2,22 +2,11 @@ import os
 import json
 import platform
 
-# import requests
-# import shutil
-# from anki_packager.logger import logger
-
-
-def get_user_config_dir():
-    """
-    Returns the platform-specific user configuration directory.
-    Windows: %APPDATA%/anki_packager
-    macOS/Linux: ~/.config/anki_packager
-    """
+def get_user_config_dir() -> str:
     if platform.system() == "Windows":
         return os.path.join(os.environ.get("APPDATA", ""), "anki_packager")
     else:
         return os.path.expanduser("~/.config/anki_packager")
-
 
 def initialize_config():
     config_dir = get_user_config_dir()
@@ -27,12 +16,11 @@ def initialize_config():
     dicts_dir = os.path.join(config_dir, "dicts")
     os.makedirs(dicts_dir, exist_ok=True)
 
-    # Default configuration
     default_config = {
         "API_KEY": "",
         "API_BASE": "",
         "MODEL": "",
-        "PROXY": "127.0.0.1:7890",
+        "PROXY": "127.0.0.1:63797",
         "EUDIC_TOKEN": "",
         "EUDIC_ID": "0",
         "DECK_NAME": "anki-packager",

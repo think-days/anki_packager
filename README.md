@@ -23,11 +23,12 @@
 
 ### 核心特性
 
-- 多源精选词典整合：[ECDICT](https://github.com/skywind3000/ECDICT)、[《有道词语辨析》加强版](https://skywind.me/blog/archives/2941)、[单词释义比例词典](https://skywind.me/blog/archives/2938)
+-
+多源精选词典整合：[ECDICT](https://github.com/skywind3000/ECDICT)、[《有道词语辨析》加强版](https://skywind.me/blog/archives/2941)、[单词释义比例词典](https://skywind.me/blog/archives/2938)
 - 智能化学习体验：
-  - 自动抓取有道词典优质例句和常用短语
-  - 支持谷歌 TTS 发音、中英双解、考纲标记等功能
-  - 支持流行 AI 模型（需要 API-KEY）对单词进行总结、助记及和情境故事生成
+    - 自动抓取有道词典优质例句和常用短语
+    - 支持谷歌 TTS 发音、中英双解、考纲标记等功能
+    - 支持流行 AI 模型（需要 API-KEY）对单词进行总结、助记及和情境故事生成
 - 便捷的数据导入：支持欧路词典生词本一键导入并批量处理单词列表，自动生成卡片
 - 优良的命令行体验：显示处理进度，支持记录错误、支持丰富的命令行参数
 - 支持 Docker 运行、支持 PyPI 安装
@@ -38,11 +39,11 @@
 
 - 正面：词头、发音、音标 + 考试大纲标签（如 中高考、CET4、CET6、GRE 等）
 - 背面：
-  - 释义：中文（ECDICT）、时态（AI）、释义和词性比例（[《有道词语辨析》加强版](https://skywind.me/blog/archives/2941)）
-  - AI 生成词根 + 辅助记忆（联想记忆 + 谐音记忆）
-  - 短语 + 例句（有道爬虫）
-  - 单词辨析（[单词释义比例词典](https://skywind.me/blog/archives/2938)）
-  - 英文释义（目前来自 ECDICT）+ AI 生成故事
+    - 释义：中文（ECDICT）、时态（AI）、释义和词性比例（[《有道词语辨析》加强版](https://skywind.me/blog/archives/2941)）
+    - AI 生成词根 + 辅助记忆（联想记忆 + 谐音记忆）
+    - 短语 + 例句（有道爬虫）
+    - 单词辨析（[单词释义比例词典](https://skywind.me/blog/archives/2938)）
+    - 英文释义（目前来自 ECDICT）+ AI 生成故事
 
 <img src="./images/卡片预览.png" alt="背面 " style="zoom:50%;" />
 
@@ -55,14 +56,19 @@
 pip install apkger
 ```
 
-在使用 apkger 之前，你需要先在 `config/config.json`文件中填写相关配置信息：
+在第一次运行时，程序会在用户目录下创建配置文件，路径通常为：
+
+- Linux/MacOS: `~/.config/anki_packager/config/config.json`
+- Windows: `%APPDATA%\anki_packager\config\config.json`
+
+请在该文件中填写以下配置信息：
 
 ```json
 {
   "API_KEY": "your-api-key-here",
   "API_BASE": "https://api.openai.com/v1",
   "MODEL": "gpt-4o",
-  "PROXY": "127.0.0.1:7890",
+  "PROXY": "127.0.0.1:63797",
   "EUDIC_TOKEN": "your-eudic-token",
   "EUDIC_ID": "0",
   "DECK_NAME": "anki_packager"
@@ -70,7 +76,9 @@ pip install apkger
 ```
 
 - 如果需要 AI 功能，必须配置 `API_KEY`、`MODEL`、`API_BASE`和 `PROXY`
-- 如果需要使用欧路词典生词本：先按照[欧陆官方获取](https://my.eudic.net/OpenAPI/Authorization) TOKEN，然后使用`apkger --eudicid` 选择 ID 写入配置文件
+  目前支持的模型：`gpt-4o`、`deepseek-ai/DeepSeek-V2.5`、`Pro/deepseek-ai/DeepSeek-V3`、`gemini-2.0-flash`
+- 如果需要使用欧路词典生词本：先按照[欧陆官方获取](https://my.eudic.net/OpenAPI/Authorization)
+  TOKEN，然后使用`apkger --eudicid` 选择 ID 写入配置文件
 
 ### 下载字典
 
@@ -116,6 +124,9 @@ apkger --eudic
 conda create -n apkg python=3.9
 conda activate apkg
 
+# 进入项目目录（以 Windows 为例）
+cd D:\\Code\\anki_packager
+
 # 安装项目依赖
 pip install -r requirements.txt
 
@@ -146,7 +157,7 @@ make build
 # 第一次运行容器下载词典（需要一点时间）
 make run
 
-# 进入容器（注意！需要在主机先配置 config/config.json）
+# 进入容器（会将 ./config 映射到容器的 ~/.config/anki_packager）
 # 在容器中运行 anki_packager，生成的牌组会保存在当前目录中
 make shell
 ```
@@ -170,7 +181,8 @@ make shell
 
 本项目得到了众多开源项目和社区的支持：
 
-- 感谢 [skywind](https://github.com/skywind3000) 开源的 [ECDICT](https://github.com/skywind3000/ECDICT) 以及其他词典项目，为本项目提供了丰富的词典资源。
+- 感谢 [skywind](https://github.com/skywind3000) 开源的 [ECDICT](https://github.com/skywind3000/ECDICT)
+  以及其他词典项目，为本项目提供了丰富的词典资源。
 - 感谢 [yihong0618](https://github.com/yihong0618) 开源的众多优秀 Python 项目，从中获益良多。
 
 ---

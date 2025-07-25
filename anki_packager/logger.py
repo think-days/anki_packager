@@ -1,14 +1,12 @@
 import logging
+import os
 
-# ANSI escape codes for bold blue
-BOLD_BLUE = "\033[1;34m"
-RESET = "\033[0m"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_PATH = os.path.join(PROJECT_ROOT, "anki_packager.log")
 
 logging.basicConfig(
     level=logging.INFO,
-    format=f"{BOLD_BLUE}[%(filename)s:%(lineno)d:%(funcName)s]{RESET} %(message)s",
-    handlers=[logging.FileHandler("anki_packager.log"), logging.StreamHandler()],
+    format=f"[%(filename)s:%(lineno)d:%(funcName)s] %(message)s",
+    handlers=[logging.FileHandler(LOG_PATH), logging.StreamHandler()],
 )
-
-logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)

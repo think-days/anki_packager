@@ -1,9 +1,10 @@
 {
   "API_KEY": "",
-  "API_BASE": "",
-  "MODEL": "",
-  "PROXY": "127.0.0.1:7890",
+  "API_BASE": "https://api.siliconflow.cn",
+  "MODEL": "Pro/deepseek-ai/DeepSeek-V3",
+  "PROXY": "",
   "EUDIC_TOKEN": "",
   "EUDIC_ID": "0",
   "DECK_NAME": "apkger"
 }
+
